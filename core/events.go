@@ -30,6 +30,9 @@ type NewMinedBlockEvent struct{ Block *types.Block }
 // RemovedLogsEvent is posted when a reorg happens
 type RemovedLogsEvent struct{ Logs []*types.Log }
 
+// NewFileDataEvent is posted when a batch of FileDatas enter the FileData pool.
+type NewFileDataEvent struct{ Fileds []*types.FileData }
+
 type ChainEvent struct {
 	Block *types.Block
 	Hash  common.Hash

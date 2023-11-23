@@ -48,6 +48,16 @@ type LesApiBackend struct {
 	gpo                 *gasprice.Oracle
 }
 
+// UploadFileData implements ethapi.Backend.
+func (*LesApiBackend) UploadFileData(data []byte) error {
+	panic("unimplemented")
+}
+
+// UploadFileDataByParams implements ethapi.Backend.
+func (*LesApiBackend) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
+	panic("unimplemented")
+}
+
 func (b *LesApiBackend) ChainConfig() *params.ChainConfig {
 	return b.eth.chainConfig
 }

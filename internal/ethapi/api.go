@@ -1837,6 +1837,24 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 	}
 }
 
+type FileDataAPI struct{
+	b         Backend
+	signer    types.Signer
+}
+
+func NewFileDataAPI(b Backend) *FileDataAPI{
+	signer := types.LatestSigner(b.ChainConfig())
+	return &FileDataAPI{b, signer}
+}
+
+func (f *FileDataAPI) UploadFileDataByParams(sender,submitter common.Address,index,length uint64,commitment,data,signData []byte,txHash common.Hash) error{
+	 return	f.b.UploadFileDataByParams(sender,submitter,index,length,commitment,data,signData,txHash)
+}
+
+func (f *FileDataAPI) UploadFileData(data []byte) error{
+	return f.b.UploadFileData(data)
+}
+
 // TransactionAPI exposes methods for reading and creating transaction data.
 type TransactionAPI struct {
 	b         Backend

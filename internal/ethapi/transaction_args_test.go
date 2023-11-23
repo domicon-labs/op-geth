@@ -212,6 +212,16 @@ type backendMock struct {
 	config  *params.ChainConfig
 }
 
+// UploadFileData implements Backend.
+func (*backendMock) UploadFileData(data []byte) error {
+	panic("unimplemented")
+}
+
+// UploadFileDataByParams implements Backend.
+func (*backendMock) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
+	panic("unimplemented")
+}
+
 func newBackendMock() *backendMock {
 	config := &params.ChainConfig{
 		ChainID:             big.NewInt(42),

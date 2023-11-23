@@ -42,6 +42,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -292,6 +293,35 @@ func (b *EthAPIBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscri
 	return b.eth.BlockChain().SubscribeLogsEvent(ch)
 }
 
+// 上传文件的接口
+func (b *EthAPIBackend) UploadFileData(data []byte) error {
+	//decode data to struct
+	fd := new(types.FileData)
+	err := rlp.DecodeBytes(data,fd)
+	if err != nil {
+		return err
+	}
+	//return b.eth.fdPool.Add([]*types.FileData{fd}, true, false)[0]
+	return nil
+}
+
+
+func (b *EthAPIBackend) UploadFileDataByParams(sender,submitter common.Address,index,length uint64,commitment,data,signData []byte,txHash common.Hash) error {
+	fd := types.NewFileData(sender,submitter,index,length,commitment,data,signData,txHash)
+	if b.eth.seqRPCService != nil {
+		// if err := b.eth.fdPool.Add([]*types.FileData{fd}, true, false)[0]; err != nil {
+		// 	log.Warn("successfully sent tx to sequencer, but failed to persist in local fileData pool", "err", err, "txHash", txHash.String())
+		// }
+		log.Info("fd----UploadFileDataByParams","sender",fd.Sender().String(),"data",string(fd.UploadData()))
+		if b.disableTxPool {
+			return nil
+		}
+	}
+
+	//return b.eth.fdPool.Add([]*types.FileData{fd}, true, false)[0]
+	return nil
+}
+
 func (b *EthAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
 	if b.eth.seqRPCService != nil {
 		data, err := signedTx.MarshalBinary()
@@ -360,6 +390,10 @@ func (b *EthAPIBackend) TxPool() *txpool.TxPool {
 
 func (b *EthAPIBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return b.eth.txPool.SubscribeTransactions(ch, true)
+}
+
+func (b *EthAPIBackend) SubscribeNewFileDataEvent(ch chan<- core.NewFileDataEvent) event.Subscription{
+	return b.eth.fdPool.SubscribeFileDatas(ch, true)
 }
 
 func (b *EthAPIBackend) SyncProgress() ethereum.SyncProgress {

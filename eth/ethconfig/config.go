@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool/blobpool"
+	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -73,6 +74,7 @@ var Defaults = Config{
 	FilterLogCacheSize: 32,
 	Miner:              miner.DefaultConfig,
 	TxPool:             legacypool.DefaultConfig,
+	FileDataPool: 		filedatapool.DefaultConfig,	
 	BlobPool:           blobpool.DefaultConfig,
 	RPCGasCap:          50000000,
 	RPCEVMTimeout:      5 * time.Second,
@@ -143,6 +145,9 @@ type Config struct {
 
 	// Transaction pool options
 	TxPool   legacypool.Config
+	// FileData pool options
+	FileDataPool filedatapool.Config
+
 	BlobPool blobpool.Config
 
 	// Gas Price Oracle options

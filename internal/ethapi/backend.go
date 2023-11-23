@@ -84,6 +84,10 @@ type Backend interface {
 	TxPoolContentFrom(addr common.Address) ([]*types.Transaction, []*types.Transaction)
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 
+	// FileData pool API
+	UploadFileDataByParams(sender,submitter common.Address,index,length uint64,commitment,data,signData []byte,txHash common.Hash) error
+	UploadFileData(data []byte) error
+
 	ChainConfig() *params.ChainConfig
 	Engine() consensus.Engine
 	HistoricalRPCService() *rpc.Client
@@ -113,10 +117,13 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 		}, {
 			Namespace: "eth",
 			Service:   NewTransactionAPI(apiBackend, nonceLock),
-		}, {
+		},{
+			Namespace: "eth",
+			Service:  NewFileDataAPI(apiBackend),
+		},{
 			Namespace: "txpool",
 			Service:   NewTxPoolAPI(apiBackend),
-		}, {
+		},{
 			Namespace: "debug",
 			Service:   NewDebugAPI(apiBackend),
 		}, {

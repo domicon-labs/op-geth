@@ -38,6 +38,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state/pruner"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/txpool/blobpool"
+	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -71,6 +72,7 @@ type Ethereum struct {
 
 	// Handlers
 	txPool *txpool.TxPool
+	fdPool *filedatapool.FilePool
 
 	blockchain         *core.BlockChain
 	handler            *handler
@@ -244,7 +246,16 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = stack.ResolvePath(config.TxPool.Journal)
 	}
+	
+	//added by echo
+	if config.FileDataPool.Journal != "" {
+		config.FileDataPool.Journal = stack.ResolvePath(config.FileDataPool.Journal)
+	}
+
 	legacyPool := legacypool.New(config.TxPool, eth.blockchain)
+
+	fileDataPool := filedatapool.New(config.FileDataPool,eth.blockchain)
+
 
 	eth.txPool, err = txpool.New(new(big.Int).SetUint64(config.TxPool.PriceLimit), eth.blockchain, []txpool.SubPool{legacyPool, blobPool})
 	if err != nil {
@@ -256,6 +267,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		Database:       chainDb,
 		Chain:          eth.blockchain,
 		TxPool:         eth.txPool,
+		FileDataPool:  	fileDataPool,
 		Merger:         eth.merger,
 		Network:        config.NetworkId,
 		Sync:           config.SyncMode,

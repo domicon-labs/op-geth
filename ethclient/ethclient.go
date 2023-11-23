@@ -284,6 +284,20 @@ func (ec *Client) TransactionCount(ctx context.Context, blockHash common.Hash) (
 	return uint(num), err
 }
 
+
+func (ec *Client) UploadFileData(ctx context.Context,data []byte) error {
+	var err error
+	tmpErr := ec.c.CallContext(ctx,&err,"eth_uploadFileData",data) 
+	return tmpErr
+
+}
+
+func (ec *Client) UploadFileDataByParams(ctx context.Context,sender common.Address,submetter common.Address,index uint64,length uint64,data []byte,commitment []byte,sign []byte,txHash common.Hash) error {
+	var err error
+	tmpErr := ec.c.CallContext(ctx,&err,"eth_uploadFileDataByParams",sender,submetter,index,length,data,commitment,sign,txHash) 
+	return tmpErr
+}
+
 // TransactionInBlock returns a single transaction at index in the given block.
 func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
 	var json *rpcTransaction
