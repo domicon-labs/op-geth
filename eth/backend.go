@@ -222,13 +222,13 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		overrides.OverrideOptimismCanyon = config.OverrideOptimismCanyon
 	}
 	overrides.ApplySuperchainUpgrades = config.ApplySuperchainUpgrades
-
-	fileDataPool := filedatapool.New(config.FileDataPool,eth.blockchain)
-
+	
 	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, config.Genesis, &overrides, eth.engine, vmConfig, eth.shouldPreserve, &config.TransactionHistory)
 	if err != nil {
 		return nil, err
 	}
+
+	fileDataPool := filedatapool.New(config.FileDataPool,eth.blockchain)
 
 	eth.blockchain.SetReceiptChan(fileDataPool.ReceiptCh())
 	if chainConfig := eth.blockchain.Config(); chainConfig.Optimism != nil { // config.Genesis.Config.ChainID cannot be used because it's based on CLI flags only, thus default to mainnet L1
