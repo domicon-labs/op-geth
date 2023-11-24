@@ -1617,6 +1617,14 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 				*result.DepositReceiptVersion = hexutil.Uint64(*receipt.DepositReceiptVersion)
 			}
 		}
+	case types.SubmitTxType:
+		srcHash := tx.SourceHash()
+		isSystemTx := tx.IsSystemTx()
+		result.SourceHash = &srcHash
+		if isSystemTx {
+			// Only include IsSystemTx when true
+			result.IsSystemTx = &isSystemTx
+		}
 	case types.LegacyTxType:
 		if v.Sign() == 0 && r.Sign() == 0 && s.Sign() == 0 { // pre-bedrock relayed tx does not have a signature
 			result.ChainID = (*hexutil.Big)(new(big.Int).Set(config.ChainID))
@@ -1709,7 +1717,7 @@ func newRPCTransactionFromBlockIndex(ctx context.Context, b *types.Block, index 
 }
 
 func depositTxReceipt(ctx context.Context, blockHash common.Hash, index uint64, backend Backend, tx *types.Transaction) *types.Receipt {
-	if tx.Type() != types.DepositTxType {
+	if tx.Type() != types.DepositTxType || tx.Type() != types.SubmitTxType {
 		return nil
 	}
 	receipts, err := backend.GetReceipts(ctx, blockHash)
@@ -1837,21 +1845,21 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 	}
 }
 
-type FileDataAPI struct{
-	b         Backend
-	signer    types.Signer
+type FileDataAPI struct {
+	b      Backend
+	signer types.Signer
 }
 
-func NewFileDataAPI(b Backend) *FileDataAPI{
+func NewFileDataAPI(b Backend) *FileDataAPI {
 	signer := types.LatestSigner(b.ChainConfig())
 	return &FileDataAPI{b, signer}
 }
 
-func (f *FileDataAPI) UploadFileDataByParams(sender,submitter common.Address,index,length uint64,commitment,data,signData []byte,txHash common.Hash) error{
-	 return	f.b.UploadFileDataByParams(sender,submitter,index,length,commitment,data,signData,txHash)
+func (f *FileDataAPI) UploadFileDataByParams(sender, submitter common.Address, index, length uint64, commitment, data, signData []byte, txHash common.Hash) error {
+	return f.b.UploadFileDataByParams(sender, submitter, index, length, commitment, data, signData, txHash)
 }
 
-func (f *FileDataAPI) UploadFileData(data []byte) error{
+func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
 }
 

@@ -209,6 +209,8 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		inner = new(BlobTx)
 	case DepositTxType:
 		inner = new(DepositTx)
+	case SubmitTxType:
+		inner = new(SubmitTx)
 	default:
 		return nil, ErrTxTypeNotSupported
 	}
@@ -350,6 +352,10 @@ func (tx *Transaction) IsDepositTx() bool {
 	return tx.Type() == DepositTxType
 }
 
+func (tx *Transaction) IsSubmitTx() bool {
+	return tx.Type() == SubmitTxType
+}
+
 // IsSystemTx returns true for deposits that are system transactions. These transactions
 // are executed in an unmetered environment & do not contribute to the block gas limit.
 func (tx *Transaction) IsSystemTx() bool {
@@ -368,7 +374,7 @@ func (tx *Transaction) Cost() *big.Int {
 
 // RollupDataGas is the amount of gas it takes to confirm the tx on L1 as a rollup
 func (tx *Transaction) RollupDataGas() RollupGasData {
-	if tx.Type() == DepositTxType {
+	if tx.Type() == DepositTxType || tx.Type() == SubmitTxType {
 		return RollupGasData{}
 	}
 	if v := tx.rollupGas.Load(); v != nil {
@@ -420,7 +426,7 @@ func (tx *Transaction) GasTipCapIntCmp(other *big.Int) int {
 // Note: if the effective gasTipCap is negative, this method returns both error
 // the actual negative value, _and_ ErrGasFeeCapTooLow
 func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) (*big.Int, error) {
-	if tx.Type() == DepositTxType {
+	if tx.Type() == DepositTxType || tx.Type() == SubmitTxType {
 		return new(big.Int), nil
 	}
 	if baseFee == nil {
