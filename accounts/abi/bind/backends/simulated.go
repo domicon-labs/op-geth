@@ -912,6 +912,11 @@ type filterBackend struct {
 	backend *SimulatedBackend
 }
 
+// SubscribeNewFileDataEvent implements filters.Backend.
+func (*filterBackend) SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription {
+	panic("unimplemented")
+}
+
 func (fb *filterBackend) ChainDb() ethdb.Database { return fb.db }
 
 func (fb *filterBackend) EventMux() *event.TypeMux { panic("not supported") }
