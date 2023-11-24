@@ -48,6 +48,11 @@ type LesApiBackend struct {
 	gpo                 *gasprice.Oracle
 }
 
+// SubscribeNewFileDataEvent implements ethapi.Backend.
+func (*LesApiBackend) SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription {
+	panic("unimplemented")
+}
+
 // UploadFileData implements ethapi.Backend.
 func (*LesApiBackend) UploadFileData(data []byte) error {
 	panic("unimplemented")

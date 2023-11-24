@@ -211,7 +211,10 @@ type BlockChain struct {
 	triedb        *trie.Database                   // The database handler for maintaining trie nodes.
 	stateCache    state.Database                   // State database to reuse between imports (contains state cache)
 
-	receiptCh     chan []*types.Receipt
+	// modify by echo
+	//receiptCh     chan []*types.Receipt
+	
+	
 	// txLookupLimit is the maximum number of blocks from head whose tx indices
 	// are reserved:
 	//  * 0:   means no limit and regenerate any missing indexes
@@ -477,11 +480,10 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, genesis *Genesis
 	return bc, nil
 }
 
-
-
-func (bc *BlockChain) SetReceiptChan(ch chan []*types.Receipt) {
-	bc.receiptCh = ch
-}
+//modify by echo
+// func (bc *BlockChain) SetReceiptChan(ch chan []*types.Receipt) {
+// 	bc.receiptCh = ch
+// }
 
 // empty returns an indicator whether the blockchain is empty.
 // Note, it's a special case that we connect a non-empty ancient
@@ -1413,7 +1415,8 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	rawdb.WriteBlock(blockBatch, block)
 	rawdb.WriteReceipts(blockBatch, block.Hash(), block.NumberU64(), receipts)
 	rawdb.WritePreimages(blockBatch, state.Preimages())
-	bc.receiptCh <- receipts
+	//modify bu echo
+	//bc.receiptCh <- receipts
 	if err := blockBatch.Write(); err != nil {
 		log.Crit("Failed to write block into disk", "err", err)
 	}

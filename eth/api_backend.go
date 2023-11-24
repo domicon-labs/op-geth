@@ -392,7 +392,7 @@ func (b *EthAPIBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.S
 }
 
 func (b *EthAPIBackend) SubscribeNewFileDataEvent(ch chan<- core.NewFileDataEvent) event.Subscription {
-	return b.eth.fdPool.SubscribeFileDatas(ch, true)
+	return b.eth.fdPool.SubscribeFileDatas(ch)
 }
 
 func (b *EthAPIBackend) SyncProgress() ethereum.SyncProgress {

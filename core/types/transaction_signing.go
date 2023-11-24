@@ -162,6 +162,9 @@ type Signer interface {
 	// Sender returns the sender address of the transaction.
 	Sender(tx *Transaction) (common.Address, error)
 
+	// // SignatureFileData returns the FileData signature is correct
+	// SignatureFileData(fd *FileData) error
+
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
 	SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error)
@@ -200,6 +203,18 @@ func (s cancunSigner) Sender(tx *Transaction) (common.Address, error) {
 	}
 	return recoverPlain(s.Hash(tx), R, S, V, true)
 }
+
+
+// SignatureFileData implements Signer.
+func (s cancunSigner) SignatureFileData(fd *FileData) error {
+	if len(fd.signData) == 0 {
+		return errors.New("file data signature is empty")
+	}
+
+
+	return nil
+}
+
 
 func (s cancunSigner) Equal(s2 Signer) bool {
 	x, ok := s2.(cancunSigner)

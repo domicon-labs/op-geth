@@ -80,7 +80,7 @@ type FilePool struct {
 	all             *lookup
 	collector       map[common.Hash]*types.FileData
 	beats           map[common.Hash]time.Time // Last heartbeat from each known account
-	diskSaveCh      chan []*types.Receipt
+	// diskSaveCh      chan []*types.Receipt
 	reqResetCh      chan *fppoolResetRequest
 	reorgDoneCh     chan chan struct{}
 	reorgShutdownCh chan struct{}  // requests shutdown of scheduleReorgLoop
@@ -97,7 +97,7 @@ func New(config Config, chain BlockChain) *FilePool {
 		collector:       make(map[common.Hash]*types.FileData),
 		beats:           make(map[common.Hash]time.Time),
 		reqResetCh:      make(chan *fppoolResetRequest),
-		diskSaveCh:      make(chan []*types.Receipt),
+		// diskSaveCh:      make(chan []*types.Receipt),
 		reorgDoneCh:     make(chan chan struct{}),
 		reorgShutdownCh: make(chan struct{}),
 		initDoneCh:      make(chan struct{}),
@@ -111,9 +111,9 @@ func New(config Config, chain BlockChain) *FilePool {
 }
 
 
-func (fp *FilePool) ReceiptCh() chan []*types.Receipt{
-	return fp.diskSaveCh
-}
+// func (fp *FilePool) ReceiptCh() chan []*types.Receipt{
+// 	return fp.diskSaveCh
+// }
 
 
 func (fp *FilePool) Init(gasTip *big.Int, head *types.Header) error {
@@ -172,16 +172,18 @@ func (fp *FilePool) loop() {
 		case <-fp.reorgShutdownCh:
 			return
 
-		// new transaction is writed on chain
-		case receipts := <-fp.diskSaveCh:
+		// // new transaction is writed on chain
+		// case receipts := <-fp.diskSaveCh:
 
-			fp.mu.Lock()
-			for _,receipt := range receipts {
-				txHash := receipt.TxHash
-				fp.saveFileDataToDisk(txHash)
-				fp.removeFileData(txHash)
-			}			
-			fp.mu.Unlock()
+		// 	fp.mu.Lock()
+		// 	for _,receipt := range receipts {
+		// 		txHash := receipt.TxHash
+		// 		err := fp.saveFileDataToDisk(txHash)
+		// 		if err == nil {
+		// 			fp.removeFileData(txHash)
+		// 		}
+		// 	}			
+		// 	fp.mu.Unlock()
 
 		// Handle inactive txHash fileData eviction
 		case <-evict.C:
@@ -378,12 +380,12 @@ func (fp *FilePool) loop() {
 // 	// pool.addTxsLocked(reinject, false)
 // }
 
-// SubscribeTransactions registers a subscription for new transaction events,
-// supporting feeding only newly seen or also resurrected transactions.
-func (fp *FilePool) SubscribeFileDatas(ch chan<- core.NewFileDataEvent, reorgs bool) event.Subscription {
+// SubscribeFileDatas registers a subscription for new FileData events,
+// supporting feeding only newly seen or also resurrected FileData.
+func (fp *FilePool) SubscribeFileDatas(ch chan<- core.NewFileDataEvent) event.Subscription {
 	// The legacy pool has a very messed up internal shuffling, so it's kind of
 	// hard to separate newly discovered transaction from resurrected ones. This
-	// is because the new txs are added to the queue, resurrected ones too and
+	// is because the new fileDatas are added to , resurrected ones too and
 	// reorgs run lazily, so separating the two would need a marker.
 	return fp.fileDataFeed.Subscribe(ch)
 }
@@ -558,6 +560,7 @@ func (fp *FilePool) journalTx(txHash common.Hash, fd *types.FileData) {
 func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) error {
 
 	//fp.signer.SignatureValues()
+
 
 	return nil
 }
