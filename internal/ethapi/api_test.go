@@ -568,6 +568,16 @@ type testBackend struct {
 	pending *types.Block
 }
 
+// UploadFileData implements Backend.
+func (*testBackend) UploadFileData(data []byte) error {
+	panic("unimplemented")
+}
+
+// UploadFileDataByParams implements Backend.
+func (*testBackend) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
+	panic("unimplemented")
+}
+
 func newTestBackend(t *testing.T, n int, gspec *core.Genesis, engine consensus.Engine, generator func(i int, b *core.BlockGen)) *testBackend {
 	var (
 		cacheConfig = &core.CacheConfig{

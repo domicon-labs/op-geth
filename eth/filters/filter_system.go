@@ -68,6 +68,7 @@ type Backend interface {
 	CurrentHeader() *types.Header
 	ChainConfig() *params.ChainConfig
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
+	SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription
 	SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription
 	SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription
 	SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
@@ -160,6 +161,9 @@ const (
 	// PendingTransactionsSubscription queries for pending transactions entering
 	// the pending state
 	PendingTransactionsSubscription
+	// PendingFileDataSubscription queries for pending fileData entering
+	// the pending state
+	PendingFileDataSubscription
 	// BlocksSubscription queries hashes for blocks that are imported
 	BlocksSubscription
 	// LastIndexSubscription keeps track of the last index
@@ -170,6 +174,8 @@ const (
 	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
+	
+	fdChanSize = 4096
 	// rmLogsChanSize is the size of channel listening to RemovedLogsEvent.
 	rmLogsChanSize = 10
 	// logsChanSize is the size of channel listening to LogsEvent.
@@ -185,6 +191,7 @@ type subscription struct {
 	logsCrit  ethereum.FilterQuery
 	logs      chan []*types.Log
 	txs       chan []*types.Transaction
+	fds       chan []*types.FileData
 	headers   chan *types.Header
 	installed chan struct{} // closed when the filter is installed
 	err       chan error    // closed when the filter is uninstalled
@@ -200,6 +207,7 @@ type EventSystem struct {
 
 	// Subscriptions
 	txsSub         event.Subscription // Subscription for new transaction event
+	fdsSub         event.Subscription // Subscription for new fileData event
 	logsSub        event.Subscription // Subscription for new log event
 	rmLogsSub      event.Subscription // Subscription for removed log event
 	pendingLogsSub event.Subscription // Subscription for pending log event
@@ -209,6 +217,7 @@ type EventSystem struct {
 	install       chan *subscription         // install filter for event notification
 	uninstall     chan *subscription         // remove filter for event notification
 	txsCh         chan core.NewTxsEvent      // Channel to receive new transactions event
+	fdsCh         chan core.NewFileDataEvent // Channel to receive new fileData event
 	logsCh        chan []*types.Log          // Channel to receive new log event
 	pendingLogsCh chan []*types.Log          // Channel to receive new log event
 	rmLogsCh      chan core.RemovedLogsEvent // Channel to receive removed log event
@@ -229,6 +238,7 @@ func NewEventSystem(sys *FilterSystem, lightMode bool) *EventSystem {
 		install:       make(chan *subscription),
 		uninstall:     make(chan *subscription),
 		txsCh:         make(chan core.NewTxsEvent, txChanSize),
+		fdsCh:         make(chan core.NewFileDataEvent, fdChanSize),
 		logsCh:        make(chan []*types.Log, logsChanSize),
 		rmLogsCh:      make(chan core.RemovedLogsEvent, rmLogsChanSize),
 		pendingLogsCh: make(chan []*types.Log, logsChanSize),
@@ -237,13 +247,14 @@ func NewEventSystem(sys *FilterSystem, lightMode bool) *EventSystem {
 
 	// Subscribe events
 	m.txsSub = m.backend.SubscribeNewTxsEvent(m.txsCh)
+	m.fdsSub = m.backend.SubscribeNewFileDataEvent(m.fdsCh)
 	m.logsSub = m.backend.SubscribeLogsEvent(m.logsCh)
 	m.rmLogsSub = m.backend.SubscribeRemovedLogsEvent(m.rmLogsCh)
 	m.chainSub = m.backend.SubscribeChainEvent(m.chainCh)
 	m.pendingLogsSub = m.backend.SubscribePendingLogsEvent(m.pendingLogsCh)
 
 	// Make sure none of the subscriptions are empty
-	if m.txsSub == nil || m.logsSub == nil || m.rmLogsSub == nil || m.chainSub == nil || m.pendingLogsSub == nil {
+	if m.txsSub == nil || m.logsSub == nil || m.rmLogsSub == nil || m.chainSub == nil || m.pendingLogsSub == nil || m.fdsSub == nil{
 		log.Crit("Subscribe for event system failed")
 	}
 
@@ -278,6 +289,7 @@ func (sub *Subscription) Unsubscribe() {
 				break uninstallLoop
 			case <-sub.f.logs:
 			case <-sub.f.txs:
+			case <-sub.f.fds:	
 			case <-sub.f.headers:
 			}
 		}
@@ -418,6 +430,20 @@ func (es *EventSystem) SubscribePendingTxs(txs chan []*types.Transaction) *Subsc
 	return es.subscribe(sub)
 }
 
+func (es *EventSystem) SubscribenNewFileDatas(fds chan []*types.FileData) *Subscription{
+	sub := &subscription{
+		id:        rpc.NewID(),
+		typ:       PendingFileDataSubscription,
+		created:   time.Now(),
+		logs:      make(chan []*types.Log),
+		fds:       fds,
+		headers:   make(chan *types.Header),
+		installed: make(chan struct{}),
+		err:       make(chan error),
+	}
+	return es.subscribe(sub)
+}
+
 type filterIndex map[Type]map[rpc.ID]*subscription
 
 func (es *EventSystem) handleLogs(filters filterIndex, ev []*types.Log) {
@@ -447,6 +473,12 @@ func (es *EventSystem) handlePendingLogs(filters filterIndex, ev []*types.Log) {
 func (es *EventSystem) handleTxsEvent(filters filterIndex, ev core.NewTxsEvent) {
 	for _, f := range filters[PendingTransactionsSubscription] {
 		f.txs <- ev.Txs
+	}
+}
+
+func (es *EventSystem) handleFileDatasEvent(filters filterIndex,ev core.NewFileDataEvent){
+	for _, f := range filters[PendingFileDataSubscription] {
+		f.fds <- ev.Fileds
 	}
 }
 
@@ -546,6 +578,7 @@ func (es *EventSystem) eventLoop() {
 	// Ensure all subscriptions get cleaned up
 	defer func() {
 		es.txsSub.Unsubscribe()
+		es.fdsSub.Unsubscribe()
 		es.logsSub.Unsubscribe()
 		es.rmLogsSub.Unsubscribe()
 		es.pendingLogsSub.Unsubscribe()
@@ -561,6 +594,8 @@ func (es *EventSystem) eventLoop() {
 		select {
 		case ev := <-es.txsCh:
 			es.handleTxsEvent(index, ev)
+		case ev := <- es.fdsCh:
+			es.handleFileDatasEvent(index, ev)
 		case ev := <-es.logsCh:
 			es.handleLogs(index, ev)
 		case ev := <-es.rmLogsCh:
@@ -593,6 +628,8 @@ func (es *EventSystem) eventLoop() {
 		// System stopped
 		case <-es.txsSub.Err():
 			return
+		case <-es.fdsSub.Err():
+			return	
 		case <-es.logsSub.Err():
 			return
 		case <-es.rmLogsSub.Err():

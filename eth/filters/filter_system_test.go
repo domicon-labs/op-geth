@@ -54,6 +54,11 @@ type testBackend struct {
 	pendingReceipts types.Receipts
 }
 
+// SubscribeNewFileDataEvent implements Backend.
+func (*testBackend) SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription {
+	panic("unimplemented")
+}
+
 func (b *testBackend) ChainConfig() *params.ChainConfig {
 	return params.TestChainConfig
 }

@@ -50,6 +50,7 @@ const (
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 
+	fdChanSize = 4096	
 	// txMaxBroadcastSize is the max size of a transaction that will be broadcasted.
 	// All transactions with a higher size will be announced and need to be fetched
 	// by the peer.
@@ -123,6 +124,8 @@ type handler struct {
 	eventMux      *event.TypeMux
 	txsCh         chan core.NewTxsEvent
 	txsSub        event.Subscription
+	fdsCh         chan core.NewFileDataEvent
+	fdsSub        event.Subscription
 	minedBlockSub *event.TypeMuxSubscription
 
 	requiredBlocks map[uint64]common.Hash
@@ -541,6 +544,12 @@ func (h *handler) Start(maxPeers int) {
 	h.txsSub = h.txpool.SubscribeTransactions(h.txsCh, false)
 	go h.txBroadcastLoop()
 
+	// broadcast fileDatas  (only new ones, not resurrected ones)
+	h.wg.Add(1)
+	h.fdsCh = make(chan core.NewFileDataEvent, fdChanSize)
+	h.fdsSub = h.fileDataPool.SubscribeFileDatas(h.fdsCh)
+	go h.fdBroadcastLoop()
+
 	// broadcast mined blocks
 	h.wg.Add(1)
 	h.minedBlockSub = h.eventMux.Subscribe(core.NewMinedBlockEvent{})
@@ -617,6 +626,13 @@ func (h *handler) BroadcastBlock(block *types.Block, propagate bool) {
 	}
 }
 
+// TODO fix
+func (h *handler) BroadcastFileData(fds types.FileDatas){
+
+
+}
+
+
 // BroadcastTransactions will propagate a batch of transactions
 // - To a square root of all peers for non-blob transactions
 // - And, separately, as announcements to all peers which are not known to
@@ -681,6 +697,20 @@ func (h *handler) minedBroadcastLoop() {
 		}
 	}
 }
+
+// fdBroadcastLoop announces new fileData to connected peers.
+func (h *handler) fdBroadcastLoop() {
+	defer h.wg.Done()
+	for {
+		select {
+		case event := <-h.fdsCh:
+			h.BroadcastFileData(event.Fileds)
+		case <-h.fdsSub.Err():
+			return
+		}
+	}
+}
+
 
 // txBroadcastLoop announces new transactions to connected peers.
 func (h *handler) txBroadcastLoop() {

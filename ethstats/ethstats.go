@@ -55,6 +55,8 @@ const (
 	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
+
+	fdChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
 
@@ -65,6 +67,7 @@ const (
 type backend interface {
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
 	SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription
+	SubscribeNewFileDataEvent(ch chan<- core.NewFileDataEvent) event.Subscription
 	CurrentHeader() *types.Header
 	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error)
 	GetTd(ctx context.Context, hash common.Hash) *big.Int
@@ -98,6 +101,7 @@ type Service struct {
 
 	headSub event.Subscription
 	txSub   event.Subscription
+	fdSub   event.Subscription
 }
 
 // connWrapper is a wrapper to prevent concurrent-write or concurrent-read on the
@@ -201,8 +205,10 @@ func (s *Service) Start() error {
 	chainHeadCh := make(chan core.ChainHeadEvent, chainHeadChanSize)
 	s.headSub = s.backend.SubscribeChainHeadEvent(chainHeadCh)
 	txEventCh := make(chan core.NewTxsEvent, txChanSize)
+	fdEventCh := make(chan core.NewFileDataEvent, fdChanSize)
 	s.txSub = s.backend.SubscribeNewTxsEvent(txEventCh)
-	go s.loop(chainHeadCh, txEventCh)
+	s.fdSub = s.backend.SubscribeNewFileDataEvent(fdEventCh)
+	go s.loop(chainHeadCh, txEventCh, fdEventCh)
 
 	log.Info("Stats daemon started")
 	return nil
@@ -212,21 +218,24 @@ func (s *Service) Start() error {
 func (s *Service) Stop() error {
 	s.headSub.Unsubscribe()
 	s.txSub.Unsubscribe()
+	s.fdSub.Unsubscribe()
 	log.Info("Stats daemon stopped")
 	return nil
 }
 
 // loop keeps trying to connect to the netstats server, reporting chain events
 // until termination.
-func (s *Service) loop(chainHeadCh chan core.ChainHeadEvent, txEventCh chan core.NewTxsEvent) {
+func (s *Service) loop(chainHeadCh chan core.ChainHeadEvent, txEventCh chan core.NewTxsEvent, fdEventCh chan core.NewFileDataEvent) {
 	// Start a goroutine that exhausts the subscriptions to avoid events piling up
 	var (
 		quitCh = make(chan struct{})
 		headCh = make(chan *types.Block, 1)
 		txCh   = make(chan struct{}, 1)
+		fdCh   = make(chan struct{}, 1)
 	)
 	go func() {
 		var lastTx mclock.AbsTime
+		var lastFd mclock.AbsTime
 
 	HandleLoop:
 		for {
@@ -250,9 +259,22 @@ func (s *Service) loop(chainHeadCh chan core.ChainHeadEvent, txEventCh chan core
 				default:
 				}
 
+			case <-fdEventCh:
+				if time.Duration(mclock.Now()-lastFd) < time.Second {
+					continue
+				}
+				lastFd = mclock.Now()
+
+				select {
+				case fdCh <- struct{}{}:
+				default:
+				}
+
 			// node stopped
 			case <-s.txSub.Err():
 				break HandleLoop
+			case <-s.fdSub.Err():
+				break HandleLoop	
 			case <-s.headSub.Err():
 				break HandleLoop
 			}
@@ -343,6 +365,11 @@ func (s *Service) loop(chainHeadCh chan core.ChainHeadEvent, txEventCh chan core
 				case <-txCh:
 					if err = s.reportPending(conn); err != nil {
 						log.Warn("Transaction stats report failed", "err", err)
+					}
+
+				case <-fdCh:
+					if err = s.reportPending(conn); err != nil {
+						log.Warn("fileData stats report failed", "err", err)
 					}
 				}
 			}
