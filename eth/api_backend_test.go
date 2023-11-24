@@ -28,6 +28,9 @@ func TestUploadFileDataByParams(t *testing.T){
 	if err != nil {
 		println("HexToECDSA---err",err.Error())
 	}
+
+
+	
 	sender := crypto.PubkeyToAddress(priv.PublicKey)
 	submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
 	err = client.UploadFileDataByParams(context.TODO(),sender,submitter,1,10,[]byte("11112"),[]byte("commit"),[]byte("sign"),common.BytesToHash([]byte("11111112222222")))

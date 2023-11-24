@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/txpool"
+	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/fetcher"
@@ -87,6 +88,8 @@ type handlerConfig struct {
 	Database       ethdb.Database         // Database for direct sync insertions
 	Chain          *core.BlockChain       // Blockchain to serve data from
 	TxPool         txPool                 // Transaction pool to propagate from
+	//modify by echo 
+	FileDataPool   *filedatapool.FilePool  // FileData Pool to propagate from
 	Merger         *consensus.Merger      // The manager for eth1/2 transition
 	Network        uint64                 // Network identifier to advertise
 	Sync           downloader.SyncMode    // Whether to snap or full sync
@@ -105,6 +108,7 @@ type handler struct {
 
 	database ethdb.Database
 	txpool   txPool
+	fileDataPool   *filedatapool.FilePool  // FileData Pool to propagate from
 	chain    *core.BlockChain
 	maxPeers int
 
@@ -145,6 +149,7 @@ func newHandler(config *handlerConfig) (*handler, error) {
 		eventMux:       config.EventMux,
 		database:       config.Database,
 		txpool:         config.TxPool,
+		fileDataPool:   config.FileDataPool,
 		noTxGossip:     config.NoTxGossip,
 		chain:          config.Chain,
 		peers:          newPeerSet(),
@@ -282,6 +287,21 @@ func newHandler(config *handlerConfig) (*handler, error) {
 	addTxs := func(txs []*types.Transaction) []error {
 		return h.txpool.Add(txs, false, false)
 	}
+
+	//modify by echo
+	// fetchFileData := func(peer string, hashes []common.Hash) error {
+	// 	p := h.peers.peer(peer)
+	// 	if p == nil {
+	// 		return errors.New("unknown peer")
+	// 	}
+	// 	return p.RequestTxs(hashes)
+	// }
+
+	// addFileData := func (fileDatas []*types.FileData) []error {
+	// 	return h.fileDataPool.Add(fileDatas,false,false)
+	// }
+
+
 	h.txFetcher = fetcher.NewTxFetcher(h.txpool.Has, addTxs, fetchTx, h.removePeer)
 	h.chainSync = newChainSyncer(h)
 	return h, nil

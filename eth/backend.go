@@ -222,10 +222,15 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		overrides.OverrideOptimismCanyon = config.OverrideOptimismCanyon
 	}
 	overrides.ApplySuperchainUpgrades = config.ApplySuperchainUpgrades
+
+	fileDataPool := filedatapool.New(config.FileDataPool,eth.blockchain)
+
 	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, config.Genesis, &overrides, eth.engine, vmConfig, eth.shouldPreserve, &config.TransactionHistory)
 	if err != nil {
 		return nil, err
 	}
+
+	eth.blockchain.SetReceiptChan(fileDataPool.ReceiptCh())
 	if chainConfig := eth.blockchain.Config(); chainConfig.Optimism != nil { // config.Genesis.Config.ChainID cannot be used because it's based on CLI flags only, thus default to mainnet L1
 		config.NetworkId = chainConfig.ChainID.Uint64() // optimism defaults eth network ID to chain ID
 		eth.networkID = config.NetworkId
@@ -254,13 +259,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	legacyPool := legacypool.New(config.TxPool, eth.blockchain)
 
-	fileDataPool := filedatapool.New(config.FileDataPool,eth.blockchain)
-
-
 	eth.txPool, err = txpool.New(new(big.Int).SetUint64(config.TxPool.PriceLimit), eth.blockchain, []txpool.SubPool{legacyPool, blobPool})
 	if err != nil {
 		return nil, err
 	}
+	eth.fdPool = fileDataPool
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieCleanLimit + cacheConfig.TrieDirtyLimit + cacheConfig.SnapshotLimit
 	if eth.handler, err = newHandler(&handlerConfig{
