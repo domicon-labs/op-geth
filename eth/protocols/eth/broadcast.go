@@ -60,6 +60,72 @@ func (p *Peer) broadcastBlocks() {
 	}
 }
 
+// broadcastFileData is a write loop that schedules fileData broadcasts
+// to the remote peer. The goal is to have an async writer that does not lock up
+// node internals and at the same time rate limits queued data.
+func (p *Peer) broadcastFileData() {
+	var (
+		queue  []common.Hash         // Queue of hashes to broadcast as full fileData
+		done   chan struct{}         // Non-nil if background broadcaster is running
+		fail   = make(chan error, 1) // Channel used to receive network error
+		failed bool                  // Flag whether a send failed, discard everything onward
+	)
+
+	for {
+		// If there's no in-flight broadcast running, check if a new one is needed
+		if done == nil && len(queue) > 0 {
+			// Pile fileData until we reach our allowed network limit
+			var (
+				hashesCount uint64
+				fds         []*types.FileData
+				//size        common.StorageSize
+			)
+			for i := 0; i < len(queue) ; i++ {
+				if fd := p.fdpool.Get(queue[i]); fd != nil {
+					fds = append(fds, fd)
+				}
+				hashesCount++
+			}
+			queue = queue[:copy(queue, queue[hashesCount:])]
+
+			if len(fds) > 0 {
+				done = make(chan struct{})
+				go func() {
+					if err := p.SendFileDatas(fds); err != nil {
+						fail <- err
+						return
+					}
+					close(done)
+					p.Log().Trace("Sent transactions", "count", len(fds))
+				}()
+			}
+		}
+		// Transfer goroutine may or may not have been started, listen for events
+		select {
+		case hashes := <-p.fdBroadcast:
+			// If the connection failed, discard all transaction events
+			if failed {
+				continue
+			}
+			// New batch of fileData to be broadcast, queue them (with cap)
+			queue = append(queue, hashes...)
+			if len(queue) > maxQueuedFileData {
+				// Fancy copy and resize to ensure buffer doesn't grow indefinitely
+				queue = queue[:copy(queue, queue[len(queue)-maxQueuedFileData:])]
+			}
+
+		case <-done:
+			done = nil
+
+		case <-fail:
+			failed = true
+
+		case <-p.term:
+			return
+		}
+	}
+}
+
 // broadcastTransactions is a write loop that schedules transaction broadcasts
 // to the remote peer. The goal is to have an async writer that does not lock up
 // node internals and at the same time rate limits queued data.

@@ -215,6 +215,16 @@ func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 	return head, err
 }
 
+type rpcFileData struct {
+	Sender         common.Address   `json:"sender"`
+	Submmiter      common.Address	`json:"submmiter"`
+	Length         hexutil.Uint64	`json:"length"`
+	Index          hexutil.Uint64	`json:"index"`
+	Data           hexutil.Bytes	`json:"data"`
+	Sign  		   hexutil.Bytes	`json:"sign"`
+	TxHash         common.Hash      `json:"txhash"`
+}
+
 type rpcTransaction struct {
 	tx *types.Transaction
 	txExtraInfo
@@ -296,6 +306,12 @@ func (ec *Client) UploadFileDataByParams(ctx context.Context,sender common.Addre
 	var err error
 	tmpErr := ec.c.CallContext(ctx,&err,"eth_uploadFileDataByParams",sender,submetter,index,length,data,commitment,sign,txHash) 
 	return tmpErr
+}
+
+func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (rpcFileData,error){
+	var fd rpcFileData
+	err := ec.c.CallContext(ctx,&fd,"eth_getFileDataByHash",hash)
+	return fd,err
 }
 
 // TransactionInBlock returns a single transaction at index in the given block.

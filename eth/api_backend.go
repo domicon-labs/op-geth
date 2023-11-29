@@ -321,6 +321,14 @@ func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address,
 	//return nil
 }
 
+func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,error){
+	 fd := b.eth.fdPool.Get(hash)
+	 if fd != nil {
+		return fd,nil
+	 }
+	 return nil,errors.New("dont have that fileData with given hash")
+}
+
 func (b *EthAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
 	if b.eth.seqRPCService != nil {
 		data, err := signedTx.MarshalBinary()
@@ -362,6 +370,10 @@ func (b *EthAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction 
 	return b.eth.txPool.Get(hash)
 }
 
+func (b *EthAPIBackend) GetPoolFileData(hash common.Hash) *types.FileData {
+	return b.eth.fdPool.Get(hash)
+}
+
 func (b *EthAPIBackend) GetTransaction(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, error) {
 	tx, blockHash, blockNumber, index := rawdb.ReadTransaction(b.eth.ChainDb(), txHash)
 	return tx, blockHash, blockNumber, index, nil
@@ -392,7 +404,7 @@ func (b *EthAPIBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.S
 }
 
 func (b *EthAPIBackend) SubscribeNewFileDataEvent(ch chan<- core.NewFileDataEvent) event.Subscription {
-	return b.eth.fdPool.SubscribeFileDatas(ch)
+	return b.eth.fdPool.SubscribenFileDatas(ch)
 }
 
 func (b *EthAPIBackend) SyncProgress() ethereum.SyncProgress {

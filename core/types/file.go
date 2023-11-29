@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -48,6 +49,10 @@ func (f *FileData) Index() uint64 {
 	return f.index
 }
 
+func (f *FileData) DataLength() uint64{
+	return f.length
+}
+
 func (f *FileData) Commitment() []byte {
 	return f.commitment
 }
@@ -60,6 +65,10 @@ func (f *FileData) TxHash() common.Hash{
 	return f.txHash
 }
 
+func (f *FileData) Sign() []byte{
+	return f.signData
+}
+
 
 func (f *FileData) Encode() ([]byte, error) {
 	data, err := rlp.EncodeToBytes(f)
@@ -70,7 +79,14 @@ func (f *FileData) Decode(data []byte) error {
 	return rlp.DecodeBytes(data, f)
 }
 
+func (f *FileData) MarshalJSON() ([]byte,error) {
+	log.Info("FileData----","MarshalJSON iscalling")
+	return rlp.EncodeToBytes(f)
+}
 
+func (f *FileData) UnmarshalJSON(data []byte) error {
+	return rlp.DecodeBytes(data,f)
+} 
 
 type FileDatas []*FileData
 

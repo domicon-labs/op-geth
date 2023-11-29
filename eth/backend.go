@@ -228,7 +228,6 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		return nil, err
 	}
 
-	fileDataPool := filedatapool.New(config.FileDataPool,eth.blockchain)
 	//modify by echo
 	//eth.blockchain.SetReceiptChan(fileDataPool.ReceiptCh())
 	if chainConfig := eth.blockchain.Config(); chainConfig.Optimism != nil { // config.Genesis.Config.ChainID cannot be used because it's based on CLI flags only, thus default to mainnet L1
@@ -258,7 +257,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	}
 
 	legacyPool := legacypool.New(config.TxPool, eth.blockchain)
-
+	fileDataPool := filedatapool.New(config.FileDataPool,eth.blockchain)
 	eth.txPool, err = txpool.New(new(big.Int).SetUint64(config.TxPool.PriceLimit), eth.blockchain, []txpool.SubPool{legacyPool, blobPool})
 	if err != nil {
 		return nil, err
@@ -270,7 +269,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		Database:       chainDb,
 		Chain:          eth.blockchain,
 		TxPool:         eth.txPool,
-		FileDataPool:  	fileDataPool,
+		FileDataPool:  	eth.fdPool,
 		Merger:         eth.merger,
 		Network:        config.NetworkId,
 		Sync:           config.SyncMode,
@@ -591,6 +590,7 @@ func (s *Ethereum) Stop() error {
 	s.bloomIndexer.Close()
 	close(s.closeBloomHandler)
 	s.txPool.Close()
+	s.fdPool.Close()
 	s.miner.Close()
 	s.blockchain.Stop()
 	s.engine.Close()

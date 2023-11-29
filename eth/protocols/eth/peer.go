@@ -33,6 +33,10 @@ const (
 	// before starting to randomly evict them.
 	maxKnownTxs = 32768
 
+	// maxKnownFds is the maximum fileData hashes to keep in the known list
+	// before starting to randomly evict them.
+	maxKnownFds = 32768
+
 	// maxKnownBlocks is the maximum block hashes to keep in the known list
 	// before starting to randomly evict them.
 	maxKnownBlocks = 1024
@@ -40,6 +44,10 @@ const (
 	// maxQueuedTxs is the maximum number of transactions to queue up before dropping
 	// older broadcasts.
 	maxQueuedTxs = 4096
+
+	// maxQueuedFileData is the maximum number of fileData to queue up before dropping
+	// older broadcasts.
+	maxQueuedFileData = 4096
 
 	// maxQueuedTxAnns is the maximum number of transaction announcements to queue up
 	// before dropping older announcements.
@@ -84,6 +92,10 @@ type Peer struct {
 	txBroadcast chan []common.Hash // Channel used to queue transaction propagation requests
 	txAnnounce  chan []common.Hash // Channel used to queue transaction announcement requests
 
+	fdpool     	FileDataPool // fileData pool used by the broadcasters for liveness checks
+	knownFds    *knownCache          // Set of fileData hashes known to be known by this peer
+	fdBroadcast chan []common.Hash   // Channel used to queue fileData propagation requests
+
 	reqDispatch chan *request  // Dispatch channel to send requests and track then until fulfilment
 	reqCancel   chan *cancel   // Dispatch channel to cancel pending requests and untrack them
 	resDispatch chan *response // Dispatch channel to fulfil pending requests and untrack them
@@ -94,28 +106,32 @@ type Peer struct {
 
 // NewPeer create a wrapper for a network connection and negotiated  protocol
 // version.
-func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool) *Peer {
+func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool, fdpool FileDataPool) *Peer {
 	peer := &Peer{
 		id:              p.ID().String(),
 		Peer:            p,
 		rw:              rw,
 		version:         version,
 		knownTxs:        newKnownCache(maxKnownTxs),
+		knownFds:        newKnownCache(maxKnownFds),
 		knownBlocks:     newKnownCache(maxKnownBlocks),
 		queuedBlocks:    make(chan *blockPropagation, maxQueuedBlocks),
 		queuedBlockAnns: make(chan *types.Block, maxQueuedBlockAnns),
 		txBroadcast:     make(chan []common.Hash),
 		txAnnounce:      make(chan []common.Hash),
+		fdBroadcast:     make(chan []common.Hash),
 		reqDispatch:     make(chan *request),
 		reqCancel:       make(chan *cancel),
 		resDispatch:     make(chan *response),
 		txpool:          txpool,
+		fdpool:          fdpool,
 		term:            make(chan struct{}),
 	}
 	// Start up all the broadcasters
 	go peer.broadcastBlocks()
 	go peer.broadcastTransactions()
 	go peer.announceTransactions()
+	go peer.broadcastFileData()
 	go peer.dispatcher()
 
 	return peer
@@ -166,6 +182,11 @@ func (p *Peer) KnownTransaction(hash common.Hash) bool {
 	return p.knownTxs.Contains(hash)
 }
 
+// KnownFileData returns whether peer is known to already have a fileData.
+func (p *Peer) KnownFileData(hash common.Hash) bool {
+	return p.knownFds.Contains(hash)
+}
+
 // markBlock marks a block as known for the peer, ensuring that the block will
 // never be propagated to this particular peer.
 func (p *Peer) markBlock(hash common.Hash) {
@@ -179,6 +200,13 @@ func (p *Peer) markTransaction(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known transaction hash
 	p.knownTxs.Add(hash)
 }
+
+// markFileData marks a fileData as known for the peer, ensuring that it
+// will never be propagated to this particular peer.
+func (p *Peer) markFileData(hash common.Hash){
+	p.knownFds.Add(hash)
+}
+
 
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
@@ -197,6 +225,16 @@ func (p *Peer) SendTransactions(txs types.Transactions) error {
 	return p2p.Send(p.rw, TransactionsMsg, txs)
 }
 
+// SendFileDatas sends fileData to the peer and includes the hashes
+// in its fileData hash set for future reference.
+//
+func (p *Peer) SendFileDatas(fds types.FileDatas) error{
+	for _, fd := range fds {
+		p.knownTxs.Add(fd.TxHash())
+	}
+	return p2p.Send(p.rw, FileDataMsg, fds)
+}
+
 // AsyncSendTransactions queues a list of transactions (by hash) to eventually
 // propagate to a remote peer. The number of pending sends are capped (new ones
 // will force old sends to be dropped)
@@ -205,6 +243,19 @@ func (p *Peer) AsyncSendTransactions(hashes []common.Hash) {
 	case p.txBroadcast <- hashes:
 		// Mark all the transactions as known, but ensure we don't overflow our limits
 		p.knownTxs.Add(hashes...)
+	case <-p.term:
+		p.Log().Debug("Dropping transaction propagation", "count", len(hashes))
+	}
+}
+
+// AsyncSendFileData queues a list of fileData (by txHash hash) to eventually
+// propagate to a remote peer. The number of pending sends are capped (new ones
+// will force old sends to be dropped)
+func (p *Peer) AsyncSendFileData(hashes []common.Hash) {
+	select {
+	case p.fdBroadcast <- hashes:
+		// Mark all the transactions as known, but ensure we don't overflow our limits
+		p.knownFds.Add(hashes...)
 	case <-p.term:
 		p.Log().Debug("Dropping transaction propagation", "count", len(hashes))
 	}
@@ -257,6 +308,16 @@ func (p *Peer) ReplyPooledTransactionsRLP(id uint64, hashes []common.Hash, txs [
 	return p2p.Send(p.rw, PooledTransactionsMsg, &PooledTransactionsRLPPacket{
 		RequestId:                     id,
 		PooledTransactionsRLPResponse: txs,
+	})
+}
+
+func (p *Peer) ReplyPooledFileDatasRLP(id uint64, hashes []common.Hash, fds []rlp.RawValue) error {
+	// Mark all the fileData as known, but ensure we don't overflow our limits
+	p.knownFds.Add(hashes...)
+	// Not packed into PooledFileDataResponse to avoid RLP decoding
+	return p2p.Send(p.rw, PooledFileDatasMsg, &PooledFileDataRLPPacket{
+		RequestId:                     id,
+		PooledFileDataRLPResponse: fds,
 	})
 }
 
@@ -469,6 +530,22 @@ func (p *Peer) RequestTxs(hashes []common.Hash) error {
 		GetPooledTransactionsRequest: hashes,
 	})
 }
+
+
+// RequestTxs fetches a batch of transactions from a remote node.
+func (p *Peer) RequestFileDatas(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of transactions", "count", len(hashes))
+	id := rand.Uint64()
+
+	requestTracker.Track(p.id, p.version, GetPooledTransactionsMsg, PooledTransactionsMsg, id)
+	return p2p.Send(p.rw, GetPooledTransactionsMsg, &GetPooledTransactionsPacket{
+		RequestId:                    id,
+		GetPooledTransactionsRequest: hashes,
+	})
+}
+
+
+
 
 // knownCache is a cache for known hashes.
 type knownCache struct {

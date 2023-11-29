@@ -197,6 +197,23 @@ func (ps *peerSet) peersWithoutBlock(hash common.Hash) []*ethPeer {
 	return list
 }
 
+// peerWithOutFileData retrieves a list of peers that do not have a given
+// fileData in their set of known hashes.
+func (ps *peerSet) peerWithOutFileData(hash common.Hash) []*ethPeer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*ethPeer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.KnownFileData(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+
+}
+
+
 // peersWithoutTransaction retrieves a list of peers that do not have a given
 // transaction in their set of known hashes.
 func (ps *peerSet) peersWithoutTransaction(hash common.Hash) []*ethPeer {

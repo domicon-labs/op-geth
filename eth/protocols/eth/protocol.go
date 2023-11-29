@@ -63,6 +63,10 @@ const (
 	PooledTransactionsMsg         = 0x0a
 	GetReceiptsMsg                = 0x0f
 	ReceiptsMsg                   = 0x10
+
+	FileDataMsg                   = 0x0c
+	PooledFileDatasMsg            = 0x0b
+	GetPooledFileDatasMsg         = 0x0d
 )
 
 var (
@@ -322,6 +326,40 @@ type PooledTransactionsRLPPacket struct {
 	PooledTransactionsRLPResponse
 }
 
+
+// FileDataPacket is the network packet fo broadcasting new fileDatas.
+type FileDataPacket []*types.FileData
+
+// GetPooledFileDatasRequest represents a fileData query.
+type GetPooledFileDatasRequest []common.Hash
+
+// GetPooledFileDataPacket represents a fileData query with request ID wrapping.
+type GetPooledFileDataPacket struct {
+	RequestId uint64
+	GetPooledFileDatasRequest
+}
+
+// PooledFileDataResponse is the network packet for transaction distribution.
+type PooledFileDataResponse []*types.FileData
+
+// PooledTransactionsPacket is the network packet for transaction distribution
+// with request ID wrapping.
+type PooledFileDataPacket struct {
+	RequestId uint64
+	PooledFileDataResponse
+}
+
+// PooledFileDataRLPResponse is the network packet for fileData distribution, used
+// in the cases we already have them in rlp-encoded form
+type PooledFileDataRLPResponse []rlp.RawValue
+
+// PooledFileDataRLPPacket is PooledFileDataRLPResponse with request ID wrapping.
+type PooledFileDataRLPPacket struct {
+	RequestId uint64
+	PooledFileDataRLPResponse
+}
+
+
 func (*StatusPacket) Name() string { return "Status" }
 func (*StatusPacket) Kind() byte   { return StatusMsg }
 
@@ -362,3 +400,9 @@ func (*GetReceiptsRequest) Kind() byte   { return GetReceiptsMsg }
 
 func (*ReceiptsResponse) Name() string { return "Receipts" }
 func (*ReceiptsResponse) Kind() byte   { return ReceiptsMsg }
+
+func (*FileDataPacket) Name() string { return "FileData"}
+func (*FileDataPacket) Kind() byte   { return FileDataMsg }
+
+func (*GetPooledFileDatasRequest) Name() string { return "GetPooledFileDatas" }
+func (*GetPooledFileDatasRequest) Kind() byte   { return PooledFileDatasMsg }

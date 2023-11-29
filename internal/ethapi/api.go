@@ -1541,6 +1541,31 @@ func (s *BlockChainAPI) rpcMarshalBlock(ctx context.Context, b *types.Block, inc
 	return fields, nil
 }
 
+// RPCFileData represents a fileData that will serialize to the RPC representation of a fileData
+type RPCFileData struct {
+	Sender         common.Address   `json:"sender"`
+	Submmiter      common.Address	`json:"submmiter"`
+	Length         hexutil.Uint64	`json:"length"`
+	Index          hexutil.Uint64	`json:"index"`
+	Data           hexutil.Bytes	`json:"data"`
+	Sign  		   hexutil.Bytes	`json:"sign"`
+	TxHash         common.Hash      `json:"txhash"`
+}
+
+func NewRPCFileData(fd *types.FileData) *RPCFileData{
+	result := &RPCFileData{
+		Sender: 	fd.Sender(),
+		Submmiter:  fd.Submitter(),
+		Length:     hexutil.Uint64(fd.DataLength()),
+		Index: 		hexutil.Uint64(fd.Index()),
+		Data:       hexutil.Bytes(fd.UploadData()),
+		Sign:       hexutil.Bytes(fd.Sign()),	
+		TxHash: 	fd.TxHash(),
+	}
+
+	return result
+}
+
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
 type RPCTransaction struct {
 	BlockHash           *common.Hash      `json:"blockHash"`
@@ -1861,6 +1886,15 @@ func (f *FileDataAPI) UploadFileDataByParams(sender, submitter common.Address, i
 
 func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
+}
+
+func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error){
+	fd,err := f.b.GetFileDataByHash(hash)
+	if err != nil {
+		return nil,err
+	}
+	rpcFd := NewRPCFileData(fd)
+	return rpcFd,err
 }
 
 // TransactionAPI exposes methods for reading and creating transaction data.

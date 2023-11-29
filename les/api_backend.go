@@ -48,6 +48,11 @@ type LesApiBackend struct {
 	gpo                 *gasprice.Oracle
 }
 
+// GetFileDataByHash implements ethapi.Backend.
+func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
+	panic("unimplemented")
+}
+
 // SubscribeNewFileDataEvent implements ethapi.Backend.
 func (*LesApiBackend) SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription {
 	panic("unimplemented")

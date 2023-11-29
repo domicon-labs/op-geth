@@ -58,6 +58,11 @@ type testBackend struct {
 	txpool *txpool.TxPool
 }
 
+// FildDataPool implements Backend.
+func (*testBackend) FildDataPool() FileDataPool {
+	panic("unimplemented")
+}
+
 // newTestBackend creates an empty chain and wraps it into a mock backend.
 func newTestBackend(blocks int) *testBackend {
 	return newTestBackendWithGenerator(blocks, false, nil)

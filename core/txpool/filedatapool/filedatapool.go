@@ -2,8 +2,6 @@ package filedatapool
 
 import (
 	"errors"
-
-	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,20 +24,20 @@ var (
 )
 
 var (
-	evictionInterval = time.Minute // Time interval to check for evictable transactions
+	evictionInterval = time.Minute // Time interval to check for evictable FileData
 
 )
 
 var (
-	knownTxMeter       = metrics.NewRegisteredMeter("fileData/known", nil)
-	invalidTxMeter     = metrics.NewRegisteredMeter("fileData/invalid", nil)
+	knownFdMeter       = metrics.NewRegisteredMeter("fileData/known", nil)
+	invalidFdMeter     = metrics.NewRegisteredMeter("fileData/invalid", nil)
 )
 
 type Config struct {
 	Journal   string           // Journal of local file to survive node restarts
 	Locals    []common.Address // Addresses that should be treated by default as local
-	NoLocals  bool             // Whether local fileData handling should be disabled
-	Rejournal time.Duration    // Time interval to regenerate the local transaction journal
+
+	Rejournal time.Duration    // Time interval to regenerate the local fileData journal
 	// JournalRemote controls whether journaling includes remote transactions or not.
 	// When true, all transactions loaded from the journal are treated as remote.
 	JournalRemote bool
@@ -49,6 +47,7 @@ type Config struct {
 var DefaultConfig = Config{
 	Journal:  "fileData.rlp",
 	Lifetime: 3 * 24 * time.Hour,
+	Rejournal: time.Hour,
 }
 
 type BlockChain interface {
@@ -91,6 +90,7 @@ type FilePool struct {
 func New(config Config, chain BlockChain) *FilePool {
 	fp := &FilePool{
 		config:          config,
+		chain:			 chain,		
 		chainconfig:     chain.Config(),
 		signer:          types.LatestSigner(chain.Config()),
 		all:             newLookup(),
@@ -103,10 +103,11 @@ func New(config Config, chain BlockChain) *FilePool {
 		initDoneCh:      make(chan struct{}),
 	}
 
-	if (!config.NoLocals || config.JournalRemote) && config.Journal != "" {
+	if (config.JournalRemote) && config.Journal != "" {
 		fp.journal = newFdJournal(config.Journal)
 	}
 
+	fp.Init(chain.CurrentBlock())
 	return fp
 }
 
@@ -116,7 +117,7 @@ func New(config Config, chain BlockChain) *FilePool {
 // }
 
 
-func (fp *FilePool) Init(gasTip *big.Int, head *types.Header) error {
+func (fp *FilePool) Init(head *types.Header) error {
 	// Initialize the state with head block, or fallback to empty one in
 	// case the head state is not available(might occur when node is not
 	// fully synced).
@@ -382,7 +383,7 @@ func (fp *FilePool) loop() {
 
 // SubscribeFileDatas registers a subscription for new FileData events,
 // supporting feeding only newly seen or also resurrected FileData.
-func (fp *FilePool) SubscribeFileDatas(ch chan<- core.NewFileDataEvent) event.Subscription {
+func (fp *FilePool) SubscribenFileDatas(ch chan<- core.NewFileDataEvent) event.Subscription {
 	// The legacy pool has a very messed up internal shuffling, so it's kind of
 	// hard to separate newly discovered transaction from resurrected ones. This
 	// is because the new fileDatas are added to , resurrected ones too and
@@ -417,19 +418,38 @@ func (fp *FilePool) removeFileData(hash common.Hash) error {
 	return nil
 }
 
+// cached with the given hash.
+func (fp *FilePool) Has(hash common.Hash) bool{
+	fd := fp.get(hash)
+	return fd != nil
+}
+
+
+// Get retrieves the fileData from local fileDataPool with given
+// tx hash.
+func (fp *FilePool) Get(hash common.Hash) *types.FileData{
+	fd := fp.get(hash)
+	if fd == nil {
+		return nil
+	}
+	return fd
+}
+
+
+// get returns a transaction if it is contained in the pool and nil otherwise.
+func (fp *FilePool) get(hash common.Hash) *types.FileData {
+	return fp.all.Get(hash)
+}
+
+
 // addRemotesSync is like addRemotes, but waits for pool reorganization. Tests use this method.
 func (fp *FilePool) addRemotesSync(fds []*types.FileData) []error {
 	return fp.Add(fds, false, true)
 }
 
-// // This is like addRemotes with a single transaction, but waits for pool reorganization. Tests use this method.
-// func (fp *FilePool) addRemoteSync(fd *types.FileData) error {
-// 	return fp.Add([]*types.FileData{fd}, false, true)[0]
-// }
-
-// toJournal retrieves all transactions that should be included in the journal,
+// toJournal retrieves all FileData that should be included in the journal,
 // grouped by origin account and sorted by nonce.
-// The returned transaction set is a copy and can be freely modified by calling code.
+// The returned FileData set is a copy and can be freely modified by calling code.
 func (fp *FilePool) toJournal() map[common.Hash]*types.FileData {
 	fds := make(map[common.Hash]*types.FileData)
 	for hash, fd := range fp.collector {
@@ -438,23 +458,16 @@ func (fp *FilePool) toJournal() map[common.Hash]*types.FileData {
 	return fds
 }
 
-// addLocals enqueues a batch of transactions into the pool if they are valid, marking the
+// addLocals enqueues a batch of FileData into the pool if they are valid, marking the
 // senders as local ones, ensuring they go around the local pricing constraints.
 //
-// This method is used to add transactions from the RPC API and performs synchronous pool
+// This method is used to add FileData from the RPC API and performs synchronous pool
 // reorganization and event propagation.
 func (fp *FilePool) addLocals(fds []*types.FileData) []error {
-	return fp.Add(fds, !fp.config.NoLocals, true)
+	return fp.Add(fds, true, true)
 }
 
-// // addLocal enqueues a single local transaction into the pool if it is valid. This is
-// // a convenience wrapper around addLocals.
-// func (fp *FilePool) addLocal(fd *types.FileData) error {
-// 	errs := fp.addLocals([]*types.FileData{fd})
-// 	return errs[0]
-// }
-
-// Add enqueues a batch of transactions into the pool if they are valid. Depending
+// Add enqueues a batch of FileData into the pool if they are valid. Depending
 // on the local flag, full pricing constraints will or will not be applied.
 //
 // If sync is set, the method will block until all internal maintenance related
@@ -469,15 +482,19 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 		// If the transaction is known, pre-set the error slot
 		if fp.all.Get(fd.TxHash()) != nil {
 			errs[i] = ErrAlreadyKnown
-			knownTxMeter.Mark(1)
+			knownFdMeter.Mark(1)
 			continue
 		}
+
+		txHash := fd.TxHash().String()
+
+		log.Info("FilePool----Add","txHash",txHash)
 		// Exclude transactions with basic errors, e.g invalid signatures and
 		// insufficient intrinsic gas as soon as possible and cache senders
 		// in transactions before obtaining lock
 		if err := fp.validateFileDataSignature(fd, local); err != nil {
 			errs[i] = err
-			invalidTxMeter.Mark(1)
+			invalidFdMeter.Mark(1)
 			continue
 		}
 		// Accumulate all unknown transactions for deeper processing
@@ -494,6 +511,10 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 
 	var nilSlot = 0
 	for _, err := range newErrs {
+
+		if err != nil {
+			log.Info("FilePool---Add--","err",err.Error())
+		}
 		for errs[nilSlot] != nil {
 			nilSlot++
 		}
@@ -528,7 +549,7 @@ func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err erro
 	hash := fd.TxHash()
 	if fp.all.Get(hash) != nil {
 		log.Trace("Discarding already known transaction", "hash", hash)
-		knownTxMeter.Mark(1)
+		knownFdMeter.Mark(1)
 		return false, ErrAlreadyKnown
 	}
 

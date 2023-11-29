@@ -212,14 +212,23 @@ type backendMock struct {
 	config  *params.ChainConfig
 }
 
+// SubscribeNewFileDataEvent implements Backend.
+func (*backendMock) SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription {
+	return nil
+}
+
 // UploadFileData implements Backend.
 func (*backendMock) UploadFileData(data []byte) error {
-	panic("unimplemented")
+	return nil
 }
 
 // UploadFileDataByParams implements Backend.
 func (*backendMock) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
-	panic("unimplemented")
+	return nil
+}
+
+func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData,error){
+	return nil,nil
 }
 
 func newBackendMock() *backendMock {

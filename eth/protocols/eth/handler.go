@@ -64,6 +64,9 @@ type Backend interface {
 	// TxPool retrieves the transaction pool object to serve data.
 	TxPool() TxPool
 
+	// TxPool retrieves the transaction pool object to serve data.
+	FildDataPool() FileDataPool
+
 	// AcceptTxs retrieves whether transaction processing is enabled on the node
 	// or if inbound transactions should simply be dropped.
 	AcceptTxs() bool
@@ -89,6 +92,13 @@ type TxPool interface {
 	Get(hash common.Hash) *types.Transaction
 }
 
+// FileDataPool defines the methods needed by the protocol handler to serve fileData.
+type FileDataPool interface {
+	// Get retrieves the fileData from the local fileDatapool with the given hash.
+	Get(hash common.Hash) *types.FileData
+}
+
+
 // MakeProtocols constructs the P2P protocol definitions for `eth`.
 func MakeProtocols(backend Backend, network uint64, dnsdisc enode.Iterator) []p2p.Protocol {
 	protocols := make([]p2p.Protocol, 0, len(ProtocolVersions))
@@ -104,7 +114,7 @@ func MakeProtocols(backend Backend, network uint64, dnsdisc enode.Iterator) []p2
 			Version: version,
 			Length:  protocolLengths[version],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
-				peer := NewPeer(version, p, rw, backend.TxPool())
+				peer := NewPeer(version, p, rw, backend.TxPool(), backend.FildDataPool())
 				defer peer.Close()
 
 				return backend.RunPeer(peer, func(peer *Peer) error {
@@ -177,8 +187,11 @@ var eth67 = map[uint64]msgHandler{
 	BlockBodiesMsg:                handleBlockBodies,
 	GetReceiptsMsg:                handleGetReceipts,
 	ReceiptsMsg:                   handleReceipts,
+	FileDataMsg:				   handleFileDatas,
 	GetPooledTransactionsMsg:      handleGetPooledTransactions,
 	PooledTransactionsMsg:         handlePooledTransactions,
+	GetPooledFileDatasMsg:         handleGetPooledFileDatas,
+
 }
 
 var eth68 = map[uint64]msgHandler{
@@ -194,6 +207,8 @@ var eth68 = map[uint64]msgHandler{
 	ReceiptsMsg:                   handleReceipts,
 	GetPooledTransactionsMsg:      handleGetPooledTransactions,
 	PooledTransactionsMsg:         handlePooledTransactions,
+	FileDataMsg:				   handleFileDatas,
+	GetPooledFileDatasMsg:         handleGetPooledFileDatas,
 }
 
 // handleMessage is invoked whenever an inbound message is received from a remote

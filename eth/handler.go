@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/txpool"
-	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/fetcher"
@@ -83,6 +82,27 @@ type txPool interface {
 	SubscribeTransactions(ch chan<- core.NewTxsEvent, reorgs bool) event.Subscription
 }
 
+// fileDataPool defines the methods needed from a fileData pool implementation to
+// support all the operations needed by the Ethereum chain protocols.
+type fileDataPool interface {
+	// Has returns an indicator whether fileDataPool has a fileData
+	// cached with the given hash.
+	Has(hash common.Hash) bool
+
+	// Get retrieves the fileData from local fileDataPool with given
+	// tx hash.
+	Get(hash common.Hash) *types.FileData
+
+	// Add should add the given transactions to the pool.
+	Add(fds []*types.FileData, local bool, sync bool) []error
+
+	// SubscribenFileDatas subscribes to new fileData events. The subscriber
+	// can decide whether to receive notifications only for newly seen fileDatas
+	// or also for reorged out ones.
+	SubscribenFileDatas(ch chan<- core.NewFileDataEvent) event.Subscription
+}
+
+
 // handlerConfig is the collection of initialization parameters to create a full
 // node network handler.
 type handlerConfig struct {
@@ -90,7 +110,7 @@ type handlerConfig struct {
 	Chain          *core.BlockChain       // Blockchain to serve data from
 	TxPool         txPool                 // Transaction pool to propagate from
 	//modify by echo 
-	FileDataPool   *filedatapool.FilePool  // FileData Pool to propagate from
+	FileDataPool   fileDataPool			  // FileData Pool to propagate from
 	Merger         *consensus.Merger      // The manager for eth1/2 transition
 	Network        uint64                 // Network identifier to advertise
 	Sync           downloader.SyncMode    // Whether to snap or full sync
@@ -109,7 +129,7 @@ type handler struct {
 
 	database ethdb.Database
 	txpool   txPool
-	fileDataPool   *filedatapool.FilePool  // FileData Pool to propagate from
+	fileDataPool   fileDataPool  // FileData Pool to propagate from
 	chain    *core.BlockChain
 	maxPeers int
 
@@ -291,6 +311,7 @@ func newHandler(config *handlerConfig) (*handler, error) {
 		return h.txpool.Add(txs, false, false)
 	}
 
+
 	//modify by echo
 	// fetchFileData := func(peer string, hashes []common.Hash) error {
 	// 	p := h.peers.peer(peer)
@@ -422,6 +443,9 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	// after this will be sent via broadcasts.
 	h.syncTransactions(peer)
 
+	
+
+
 	// Create a notification channel for pending requests if the peer goes down
 	dead := make(chan struct{})
 	defer close(dead)
@@ -547,7 +571,7 @@ func (h *handler) Start(maxPeers int) {
 	// broadcast fileDatas  (only new ones, not resurrected ones)
 	h.wg.Add(1)
 	h.fdsCh = make(chan core.NewFileDataEvent, fdChanSize)
-	h.fdsSub = h.fileDataPool.SubscribeFileDatas(h.fdsCh)
+	h.fdsSub = h.fileDataPool.SubscribenFileDatas(h.fdsCh)
 	go h.fdBroadcastLoop()
 
 	// broadcast mined blocks
@@ -628,7 +652,28 @@ func (h *handler) BroadcastBlock(block *types.Block, propagate bool) {
 
 // TODO fix
 func (h *handler) BroadcastFileData(fds types.FileDatas){
+	var (
+		directCount int // Number of fileData sent directly to peers (duplicates included)
+		directPeers int // Number of peers that were sent fileData directly
+		
+		fdset = make(map[*ethPeer][]common.Hash)
+	)
 
+	for _,fd := range fds {
+		peers := h.peers.peerWithOutFileData(fd.TxHash())
+		// Send the tx unconditionally to a subset of our peers
+		for _, peer := range peers {
+			fdset[peer] = append(fdset[peer], fd.TxHash())
+		}
+	}
+
+	for peer, hashes := range fdset {
+		directPeers++
+		directCount += len(hashes)
+		peer.AsyncSendFileData(hashes)
+	}
+
+	log.Debug("Distributed fileData","bcastpeers", directPeers, "bcastcount", directCount,"plainfds",len(fds))
 
 }
 

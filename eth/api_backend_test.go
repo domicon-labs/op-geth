@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 const (
@@ -28,13 +29,29 @@ func TestUploadFileDataByParams(t *testing.T){
 	if err != nil {
 		println("HexToECDSA---err",err.Error())
 	}
-
-
-	
 	sender := crypto.PubkeyToAddress(priv.PublicKey)
 	submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
 	err = client.UploadFileDataByParams(context.TODO(),sender,submitter,1,10,[]byte("11112"),[]byte("commit"),[]byte("sign"),common.BytesToHash([]byte("11111112222222")))
 	if err != nil {
 		println("UploadFileDataByParams---err",err.Error())
 	}
+}
+
+
+
+func TestGetFileDataByHash(t *testing.T){
+
+	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	if err != nil {
+		println("DialContext-----err",err.Error())
+	}
+
+	
+	fileData,err := client.GetFileDataByHash(context.TODO(),common.BytesToHash([]byte("11111112222222")))
+	if err != nil {
+		println("GetFileDataByHash---err",err.Error())
+	}
+
+	log.Info("test-----","fileData",fileData)
+	
 }

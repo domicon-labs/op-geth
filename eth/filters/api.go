@@ -46,6 +46,7 @@ type filter struct {
 	hashes   []common.Hash
 	fullTx   bool
 	txs      []*types.Transaction
+	fds      []*types.FileData
 	crit     FilterCriteria
 	logs     []*types.Log
 	s        *Subscription // associated subscription in event system
@@ -104,6 +105,38 @@ func (api *FilterAPI) timeoutLoop(timeout time.Duration) {
 	}
 }
 
+func (api *FilterAPI) NewFileDataFilter() rpc.ID{
+	var (
+		newFileDatas   = make(chan []*types.FileData)
+		newFileDataSub = api.events.SubscribenNewFileDatas(newFileDatas)
+	)
+
+	api.filtersMu.Lock()
+	api.filters[newFileDataSub.ID] = &filter{typ: PendingFileDataSubscription, deadline: time.NewTimer(api.timeout),fds: make([]*types.FileData, 0) ,s: newFileDataSub}
+	api.filtersMu.Unlock()
+
+	go func() {
+		for {
+			select {
+			case fd := <-newFileDatas:
+				api.filtersMu.Lock()
+				if f, found := api.filters[newFileDataSub.ID]; found {
+					f.fds = append(f.fds, fd...)
+				}
+				api.filtersMu.Unlock()
+			case <-newFileDataSub.Err():
+				api.filtersMu.Lock()
+				delete(api.filters, newFileDataSub.ID)
+				api.filtersMu.Unlock()
+				return
+			}
+		}
+	}()
+
+	return newFileDataSub.ID
+}
+
+
 // NewPendingTransactionFilter creates a filter that fetches pending transactions
 // as transactions enter the pending state.
 //
@@ -139,6 +172,46 @@ func (api *FilterAPI) NewPendingTransactionFilter(fullTx *bool) rpc.ID {
 
 	return pendingTxSub.ID
 }
+
+// NewPendingTransactions creates a subscription that is triggered each time a
+// transaction enters the transaction pool.
+func (api *FilterAPI) NewFileData(ctx context.Context) (*rpc.Subscription,error){
+	notifier, supported := rpc.NotifierFromContext(ctx)
+	if !supported {
+		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
+	}
+
+	rpcSub := notifier.CreateSubscription()
+	go func() {
+		fds := make(chan []*types.FileData, 128)
+		fileDataSub := api.events.SubscribenNewFileDatas(fds)
+		//chainConfig := api.sys.backend.ChainConfig()
+
+		for {
+			select {
+			case fds := <-fds:
+				// To keep the original behaviour, send a single tx hash in one notification.
+				// TODO(rjl493456442) Send a batch of tx hashes in one notification
+				//latest := api.sys.backend.CurrentHeader()
+				for _, fd := range fds {
+						rpcFd := ethapi.NewRPCFileData(fd)
+						notifier.Notify(rpcSub.ID, rpcFd)
+				}
+			case <-rpcSub.Err():
+				fileDataSub.Unsubscribe()
+				return
+			case <-notifier.Closed():
+				fileDataSub.Unsubscribe()
+				return
+			}
+		}
+	}()
+
+	return rpcSub, nil
+
+}
+
+
 
 // NewPendingTransactions creates a subscription that is triggered each time a
 // transaction enters the transaction pool. If fullTx is true the full tx is

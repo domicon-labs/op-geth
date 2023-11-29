@@ -346,6 +346,20 @@ var (
 		Category: flags.FileDataCategory,
 	} 
 
+	FileDataLifetimeFlag = &cli.DurationFlag{
+		Name:     "filedatapool.lifetime",
+		Usage:    "Maximum amount of time non-executable fileData are queued",
+		Value:    ethconfig.Defaults.FileDataPool.Lifetime,
+		Category: flags.FileDataCategory,
+	}	
+
+	FileDataRejournalFlag = &cli.DurationFlag{
+		Name:     "filedatapool.lifetime",
+		Usage:    "Time interval to regenerate the local transaction journal",
+		Value:    ethconfig.Defaults.FileDataPool.Rejournal,
+		Category: flags.FileDataCategory,
+	}
+
 	// Transaction pool settings
 	TxPoolLocalsFlag = &cli.StringFlag{
 		Name:     "txpool.locals",
@@ -1612,7 +1626,28 @@ func setGPO(ctx *cli.Context, cfg *gasprice.Config, light bool) {
 }
 
 func setFileDataPool(ctx *cli.Context, cfg *filedatapool.Config){
+	if ctx.IsSet(FileDataPoolLocalsFlag.Name) {
+		locals := strings.Split(ctx.String(FileDataPoolLocalsFlag.Name), ",")
+		for _, account := range locals {
+			if trimmed := strings.TrimSpace(account); !common.IsHexAddress(trimmed) {
+				Fatalf("Invalid account in --txpool.locals: %s", trimmed)
+			} else {
+				cfg.Locals = append(cfg.Locals, common.HexToAddress(account))
+			}
+		}
+	}
 
+	if ctx.IsSet(FileDataPoolJournalFlag.Name) {
+		cfg.Journal = ctx.String(FileDataPoolJournalFlag.Name)
+	}
+	
+	if ctx.IsSet(FileDataLifetimeFlag.Name) {
+		cfg.Lifetime = ctx.Duration(FileDataLifetimeFlag.Name)
+	}
+
+	if ctx.IsSet(FileDataRejournalFlag.Name) {
+		cfg.Rejournal = ctx.Duration(FileDataRejournalFlag.Name)
+	}
 
 }
 

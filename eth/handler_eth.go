@@ -33,6 +33,11 @@ import (
 // packets that are sent as replies or broadcasts.
 type ethHandler handler
 
+// FildDataPool implements eth.Backend.
+func (*ethHandler) FildDataPool() eth.FileDataPool {
+	panic("unimplemented")
+}
+
 func (h *ethHandler) Chain() *core.BlockChain { return h.chain }
 
 // NilPool satisfies the TxPool interface but does not return any tx in the

@@ -499,3 +499,55 @@ func handlePooledTransactions(backend Backend, msg Decoder, peer *Peer) error {
 
 	return backend.Handle(peer, &txs.PooledTransactionsResponse)
 }
+
+func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
+	// FileDatas can be processed, parse all of them and deliver to the pool
+	var fds FileDataPacket
+	if err := msg.Decode(&fds); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}
+	for i, fd := range fds {
+		// Validate and mark the remote transaction
+		if fd == nil {
+			return fmt.Errorf("%w: transaction %d is nil", errDecode, i)
+		}
+		peer.markFileData(fd.TxHash())
+	}
+	return backend.Handle(peer, &fds)
+}
+
+func handleGetPooledFileDatas(backend Backend,msg Decoder,peer *Peer) error {
+	var query GetPooledFileDataPacket
+	if err := msg.Decode(&query); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}	
+	
+	hashes,fds := answerGetPooledFileDatas(backend, query.GetPooledFileDatasRequest)
+	return peer.ReplyPooledFileDatasRLP(query.RequestId, hashes, fds)
+}
+
+func answerGetPooledFileDatas(backend Backend, query GetPooledFileDatasRequest) ([]common.Hash, []rlp.RawValue) {
+	// Gather transactions until the fetch or network limits is reached
+	var (
+		bytes  int
+		hashes []common.Hash
+		fds    []rlp.RawValue
+	)
+	for _, hash := range query {
+		
+		// Retrieve the requested transaction, skipping if unknown to us
+		fd := backend.FildDataPool().Get(hash)
+		if fd == nil {
+			continue
+		}
+		// If known, encode and queue for response packet
+		if encoded, err := rlp.EncodeToBytes(fd); err != nil {
+			log.Error("Failed to encode transaction", "err", err)
+		} else {
+			hashes = append(hashes, hash)
+			fds = append(fds, encoded)
+			bytes += len(encoded)
+		}
+	}
+	return hashes, fds
+}
