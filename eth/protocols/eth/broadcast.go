@@ -21,6 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 const (
@@ -96,14 +97,19 @@ func (p *Peer) broadcastFileData() {
 						return
 					}
 					close(done)
-					p.Log().Trace("Sent transactions", "count", len(fds))
+					p.Log().Trace("Sent fileData", "count", len(fds))
 				}()
 			}
 		}
 		// Transfer goroutine may or may not have been started, listen for events
 		select {
 		case hashes := <-p.fdBroadcast:
-			// If the connection failed, discard all transaction events
+			
+			for _,hash := range hashes{
+				log.Info("broadcastFileData---","hash",hash.String())
+			}
+
+			// If the connection failed, discard all fileData events
 			if failed {
 				continue
 			}

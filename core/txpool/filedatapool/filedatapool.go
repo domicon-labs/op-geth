@@ -385,7 +385,7 @@ func (fp *FilePool) loop() {
 // supporting feeding only newly seen or also resurrected FileData.
 func (fp *FilePool) SubscribenFileDatas(ch chan<- core.NewFileDataEvent) event.Subscription {
 	// The legacy pool has a very messed up internal shuffling, so it's kind of
-	// hard to separate newly discovered transaction from resurrected ones. This
+	// hard to separate newly discovered fileData from resurrected ones. This
 	// is because the new fileDatas are added to , resurrected ones too and
 	// reorgs run lazily, so separating the two would need a marker.
 	return fp.fileDataFeed.Subscribe(ch)
@@ -510,10 +510,10 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 	fp.mu.Unlock()
 
 	var nilSlot = 0
-	for _, err := range newErrs {
-
-		if err != nil {
-			log.Info("FilePool---Add--","err",err.Error())
+	var final = make([]*types.FileData, 0)
+	for index, err := range newErrs {
+		if err == nil {
+			final = append(final,news[index])
 		}
 		for errs[nilSlot] != nil {
 			nilSlot++
@@ -522,6 +522,9 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 		nilSlot++
 	}
 
+	if len(final) != 0 {
+		fp.fileDataFeed.Send(core.NewFileDataEvent{Fileds: final})
+	}
 	return errs
 }
 
@@ -597,7 +600,7 @@ func (fp *FilePool) Close() error {
 	if fp.journal != nil {
 		fp.journal.close()
 	}
-	log.Info("FilePoolkiijk pool stopped")
+	log.Info("FilePool pool stopped")
 	return nil
 }
 

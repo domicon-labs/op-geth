@@ -138,6 +138,7 @@ type handler struct {
 	downloader   *downloader.Downloader
 	blockFetcher *fetcher.BlockFetcher
 	txFetcher    *fetcher.TxFetcher
+	fdFetcher    *fetcher.FileDataFetcher
 	peers        *peerSet
 	merger       *consensus.Merger
 
@@ -311,22 +312,18 @@ func newHandler(config *handlerConfig) (*handler, error) {
 		return h.txpool.Add(txs, false, false)
 	}
 
-
-	//modify by echo
-	// fetchFileData := func(peer string, hashes []common.Hash) error {
-	// 	p := h.peers.peer(peer)
-	// 	if p == nil {
-	// 		return errors.New("unknown peer")
-	// 	}
-	// 	return p.RequestTxs(hashes)
-	// }
-
-	// addFileData := func (fileDatas []*types.FileData) []error {
-	// 	return h.fileDataPool.Add(fileDatas,false,false)
-	// }
-
-
+	fetchFd := func (peer string,hashes []common.Hash) error {
+		p := h.peers.peer(peer)
+		if p == nil {
+			return errors.New("unknown peer")
+		}
+		return p.RequestFileDatas(hashes)
+	}
+	addFds := func(fds []*types.FileData) []error {
+		return h.fileDataPool.Add(fds, false, false)
+	}
 	h.txFetcher = fetcher.NewTxFetcher(h.txpool.Has, addTxs, fetchTx, h.removePeer)
+	h.fdFetcher = fetcher.NewFdFetcher(h.fileDataPool.Has,addFds,fetchFd,h.removePeer)
 	h.chainSync = newChainSyncer(h)
 	return h, nil
 }
@@ -442,9 +439,6 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	// Propagate existing transactions. new transactions appearing
 	// after this will be sent via broadcasts.
 	h.syncTransactions(peer)
-
-	
-
 
 	// Create a notification channel for pending requests if the peer goes down
 	dead := make(chan struct{})
@@ -590,6 +584,7 @@ func (h *handler) Start(maxPeers int) {
 
 func (h *handler) Stop() {
 	h.txsSub.Unsubscribe()        // quits txBroadcastLoop
+	h.fdsSub.Unsubscribe()		  // quits fileDataBroadcastLoop
 	h.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 
 	// Quit chainSync and txsync64.
@@ -660,9 +655,11 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 	)
 
 	for _,fd := range fds {
+		log.Info("BroadcastFileData---","需要广播的fileData",fd.TxHash().String())
 		peers := h.peers.peerWithOutFileData(fd.TxHash())
-		// Send the tx unconditionally to a subset of our peers
+		// Send the fileData unconditionally to a subset of our peers
 		for _, peer := range peers {
+			log.Info("BroadcastFileData---peer-","peer",peer.ID())
 			fdset[peer] = append(fdset[peer], fd.TxHash())
 		}
 	}

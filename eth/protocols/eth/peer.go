@@ -24,6 +24,7 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -232,6 +233,7 @@ func (p *Peer) SendFileDatas(fds types.FileDatas) error{
 	for _, fd := range fds {
 		p.knownTxs.Add(fd.TxHash())
 	}
+	log.Info("SendFileDatas----","FileDataMsg",FileDataMsg)
 	return p2p.Send(p.rw, FileDataMsg, fds)
 }
 
@@ -254,10 +256,14 @@ func (p *Peer) AsyncSendTransactions(hashes []common.Hash) {
 func (p *Peer) AsyncSendFileData(hashes []common.Hash) {
 	select {
 	case p.fdBroadcast <- hashes:
-		// Mark all the transactions as known, but ensure we don't overflow our limits
+
+		for _,hash := range hashes{
+			log.Info("AsyncSendFileData----","hash",hash.String())
+		}
+		// Mark all the fileData as known, but ensure we don't overflow our limits
 		p.knownFds.Add(hashes...)
 	case <-p.term:
-		p.Log().Debug("Dropping transaction propagation", "count", len(hashes))
+		p.Log().Debug("Dropping fileData propagation", "count", len(hashes))
 	}
 }
 

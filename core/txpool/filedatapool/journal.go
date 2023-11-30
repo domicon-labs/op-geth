@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// errNoActiveJournal is returned if a transaction is attempted to be inserted
+// errNoActiveJournal is returned if a fileData is attempted to be inserted
 // into the journal, but no such file is currently open.
 var errNoActiveJournal = errors.New("no active journal")
 
@@ -22,12 +22,12 @@ func (*devNull) Write(p []byte) (n int, err error) { return len(p), nil }
 func (*devNull) Close() error                      { return nil }
 
 type journal struct {
-	path   string         // Filesystem path to store the transactions at
+	path   string         // Filesystem path to store the fileDatas at
 
-	writer io.WriteCloser // Output stream to write new transactions into
+	writer io.WriteCloser // Output stream to write new fileDatas into
 }
 
-// newFdJournal creates a new transaction journal to
+// newFdJournal creates a new fileData journal to
 func newFdJournal(path string) *journal {
 	return &journal{
 		path: path,
@@ -37,7 +37,7 @@ func newFdJournal(path string) *journal {
 // load parses a fileData journal dump from disk, loading its contents into
 // the specified pool.
 func (journal *journal) load(add func([]*types.FileData) []error) error {
-	// Open the journal for loading any past transactions
+	// Open the journal for loading any past fileDatas
 	input, err := os.Open(journal.path)
 	if errors.Is(err, fs.ErrNotExist) {
 		// Skip the parsing if the journal file doesn't exist at all
@@ -56,9 +56,9 @@ func (journal *journal) load(add func([]*types.FileData) []error) error {
 	stream := rlp.NewStream(input, 0)
 	total, dropped := 0, 0
 
-	// Create a method to load a limited batch of transactions and bump the
+	// Create a method to load a limited batch of fileDatas and bump the
 	// appropriate progress counters. Then use this method to load all the
-	// journaled transactions in small-ish batches.
+	// journaled fileDatas in small-ish batches.
 	loadBatch := func(files types.FileDatas) {
 		for _, err := range add(files) {
 			if err != nil {
@@ -83,7 +83,7 @@ func (journal *journal) load(add func([]*types.FileData) []error) error {
 			}
 			break
 		}
-		// New transaction parsed, queue up for later, import if threshold is reached
+		// New fileData parsed, queue up for later, import if threshold is reached
 		total++
 
 		if batch = append(batch, fd); batch.Len() > 1024 {
@@ -96,7 +96,7 @@ func (journal *journal) load(add func([]*types.FileData) []error) error {
 	return failure
 }
 
-// insert adds the specified transaction to the local disk journal.
+// insert adds the specified fileData to the local disk journal.
 func (journal *journal) insert(fd *types.FileData) error {
 	if journal.writer == nil {
 		return errNoActiveJournal
@@ -107,8 +107,8 @@ func (journal *journal) insert(fd *types.FileData) error {
 	return nil
 }
 
-// rotate regenerates the transaction journal based on the current contents of
-// the transaction pool.
+// rotate regenerates the fileData journal based on the current contents of
+// the fileData pool.
 func (journal *journal) rotate(all map[common.Hash]*types.FileData) error {
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
@@ -146,7 +146,7 @@ func (journal *journal) rotate(all map[common.Hash]*types.FileData) error {
 	return nil
 }
 
-// close flushes the transaction journal contents to disk and closes the file.
+// close flushes the fileData journal contents to disk and closes the file.
 func (journal *journal) close() error {
 	var err error
 

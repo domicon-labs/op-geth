@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
@@ -34,8 +35,8 @@ import (
 type ethHandler handler
 
 // FildDataPool implements eth.Backend.
-func (*ethHandler) FildDataPool() eth.FileDataPool {
-	panic("unimplemented")
+func (h *ethHandler) FildDataPool() eth.FileDataPool {
+	return h.fileDataPool
 }
 
 func (h *ethHandler) Chain() *core.BlockChain { return h.chain }
@@ -104,6 +105,11 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 
 	case *eth.PooledTransactionsResponse:
 		return h.txFetcher.Enqueue(peer.ID(), *packet, true)
+
+	case *eth.FileDataPacket:
+		log.Info("Handle----FileDataPacket","FileDataPacket",*packet)
+		return h.fdFetcher.Enqueue(peer.ID(), *packet, false)
+		
 
 	default:
 		return fmt.Errorf("unexpected eth packet type: %T", packet)
