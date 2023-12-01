@@ -7,7 +7,7 @@ import (
 	"math/big"
 )
 
-const SubmitTxType = 0x80
+const SubmitTxType = 0x7D
 
 type SubmitTx struct {
 	// SourceHash uniquely identifies the source of to submit
