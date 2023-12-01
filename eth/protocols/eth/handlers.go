@@ -503,14 +503,17 @@ func handlePooledTransactions(backend Backend, msg Decoder, peer *Peer) error {
 func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	// FileDatas can be processed, parse all of them and deliver to the pool
 	var fds FileDataPacket
+	log.Info("handleFileDatas---","msg",msg)
 	if err := msg.Decode(&fds); err != nil {
 		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
 	}
 	for i, fd := range fds {
-		// Validate and mark the remote transaction
+		// Validate and mark the remote fileData
 		if fd == nil {
-			return fmt.Errorf("%w: transaction %d is nil", errDecode, i)
+			return fmt.Errorf("%w: fileData %d is nil", errDecode, i)
 		}
+		log.Info("handleFileDatas----","TxHash",fd.TxHash())
+		log.Info("handleFileDatas---","data",string(fd.UploadData()))
 		peer.markFileData(fd.TxHash())
 	}
 	return backend.Handle(peer, &fds)

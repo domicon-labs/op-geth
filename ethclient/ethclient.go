@@ -220,6 +220,7 @@ type rpcFileData struct {
 	Submmiter      common.Address	`json:"submmiter"`
 	Length         hexutil.Uint64	`json:"length"`
 	Index          hexutil.Uint64	`json:"index"`
+	Commitment     hexutil.Bytes    `json:"commitment"`	
 	Data           hexutil.Bytes	`json:"data"`
 	Sign  		   hexutil.Bytes	`json:"sign"`
 	TxHash         common.Hash      `json:"txhash"`

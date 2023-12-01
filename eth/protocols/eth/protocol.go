@@ -47,7 +47,7 @@ var ProtocolVersions = []uint{ETH68, ETH67}
 var protocolLengths = map[uint]uint64{ETH68: 17, ETH67: 17}
 
 // maxMessageSize is the maximum cap on the size of a protocol message.
-const maxMessageSize = 10 * 1024 * 1024
+const maxMessageSize uint64 = 10 * 1024 * 1024 * 1024
 
 const (
 	StatusMsg                     = 0x00
@@ -63,8 +63,7 @@ const (
 	PooledTransactionsMsg         = 0x0a
 	GetReceiptsMsg                = 0x0f
 	ReceiptsMsg                   = 0x10
-
-	FileDataMsg                   = 0x0c
+	FileDataMsg          		  = 0x0c
 	PooledFileDatasMsg            = 0x0b
 	GetPooledFileDatasMsg         = 0x0d
 )
@@ -326,7 +325,6 @@ type PooledTransactionsRLPPacket struct {
 	PooledTransactionsRLPResponse
 }
 
-
 // FileDataPacket is the network packet fo broadcasting new fileDatas.
 type FileDataPacket []*types.FileData
 
@@ -358,7 +356,6 @@ type PooledFileDataRLPPacket struct {
 	RequestId uint64
 	PooledFileDataRLPResponse
 }
-
 
 func (*StatusPacket) Name() string { return "Status" }
 func (*StatusPacket) Kind() byte   { return StatusMsg }
@@ -401,7 +398,7 @@ func (*GetReceiptsRequest) Kind() byte   { return GetReceiptsMsg }
 func (*ReceiptsResponse) Name() string { return "Receipts" }
 func (*ReceiptsResponse) Kind() byte   { return ReceiptsMsg }
 
-func (*FileDataPacket) Name() string { return "FileData"}
+func (*FileDataPacket) Name() string { return "FileData" }
 func (*FileDataPacket) Kind() byte   { return FileDataMsg }
 
 func (*GetPooledFileDatasRequest) Name() string { return "GetPooledFileDatas" }

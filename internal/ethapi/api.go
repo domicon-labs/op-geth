@@ -1547,6 +1547,7 @@ type RPCFileData struct {
 	Submmiter      common.Address	`json:"submmiter"`
 	Length         hexutil.Uint64	`json:"length"`
 	Index          hexutil.Uint64	`json:"index"`
+	Commitment     hexutil.Bytes    `json:"commitment"`
 	Data           hexutil.Bytes	`json:"data"`
 	Sign  		   hexutil.Bytes	`json:"sign"`
 	TxHash         common.Hash      `json:"txhash"`
@@ -1558,6 +1559,7 @@ func NewRPCFileData(fd *types.FileData) *RPCFileData{
 		Submmiter:  fd.Submitter(),
 		Length:     hexutil.Uint64(fd.DataLength()),
 		Index: 		hexutil.Uint64(fd.Index()),
+		Commitment: hexutil.Bytes(fd.Commitment()),
 		Data:       hexutil.Bytes(fd.UploadData()),
 		Sign:       hexutil.Bytes(fd.Sign()),	
 		TxHash: 	fd.TxHash(),
