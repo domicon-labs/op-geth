@@ -144,8 +144,9 @@ type Message struct {
 	// This field will be set to true for operations like RPC eth_call.
 	SkipAccountChecks bool
 
-	IsSystemTx    bool                // IsSystemTx indicates the message, if also a deposit, does not emit gas usage.
-	IsDepositTx   bool                // IsDepositTx indicates the message is force-included and can persist a mint.
+	IsSystemTx    bool // IsSystemTx indicates the message, if also a deposit, does not emit gas usage.
+	IsDepositTx   bool // IsDepositTx indicates the message is force-included and can persist a mint.
+	IsSubmitTx    bool
 	Mint          *big.Int            // Mint is the amount to mint before EVM processing, or nil if there is no minting.
 	RollupDataGas types.RollupGasData // RollupDataGas indicates the rollup cost of the message, 0 if not a rollup or no cost.
 }
@@ -163,6 +164,7 @@ func TransactionToMessage(tx *types.Transaction, s types.Signer, baseFee *big.In
 		Data:          tx.Data(),
 		AccessList:    tx.AccessList(),
 		IsSystemTx:    tx.IsSystemTx(),
+		IsSubmitTx:    tx.IsSubmitTx(),
 		IsDepositTx:   tx.IsDepositTx(),
 		Mint:          tx.Mint(),
 		RollupDataGas: tx.RollupDataGas(),
@@ -285,7 +287,7 @@ func (st *StateTransition) buyGas() error {
 }
 
 func (st *StateTransition) preCheck() error {
-	if st.msg.IsDepositTx {
+	if st.msg.IsDepositTx || st.msg.IsSubmitTx {
 		// No fee fields to check, no nonce to check, and no need to check if EOA (L1 already verified it for us)
 		// Gas is free, but no refunds!
 		st.initialGas = st.msg.GasLimit
