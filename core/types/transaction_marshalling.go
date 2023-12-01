@@ -472,6 +472,52 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		if dec.Nonce != nil {
 			inner = &depositTxWithNonce{DepositTx: itx, EffectiveNonce: uint64(*dec.Nonce)}
 		}
+	case SubmitTxType:
+		if dec.AccessList != nil || dec.MaxFeePerGas != nil ||
+			dec.MaxPriorityFeePerGas != nil {
+			return errors.New("unexpected field(s) in deposit transaction")
+		}
+		if dec.GasPrice != nil && dec.GasPrice.ToInt().Cmp(common.Big0) != 0 {
+			return errors.New("deposit transaction GasPrice must be 0")
+		}
+		if (dec.V != nil && dec.V.ToInt().Cmp(common.Big0) != 0) ||
+			(dec.R != nil && dec.R.ToInt().Cmp(common.Big0) != 0) ||
+			(dec.S != nil && dec.S.ToInt().Cmp(common.Big0) != 0) {
+			return errors.New("deposit transaction signature must be 0 or unset")
+		}
+		var itx SubmitTx
+		inner = &itx
+		if dec.To != nil {
+			itx.To = dec.To
+		}
+		if dec.Gas == nil {
+			return errors.New("missing required field 'gas' for txdata")
+		}
+		itx.Gas = uint64(*dec.Gas)
+		if dec.Value == nil {
+			return errors.New("missing required field 'value' in transaction")
+		}
+		itx.Value = (*big.Int)(dec.Value)
+		if dec.Input == nil {
+			return errors.New("missing required field 'input' in transaction")
+		}
+		itx.Data = *dec.Input
+		if dec.From == nil {
+			return errors.New("missing required field 'from' in transaction")
+		}
+		itx.From = *dec.From
+		if dec.SourceHash == nil {
+			return errors.New("missing required field 'sourceHash' in transaction")
+		}
+		itx.SourceHash = *dec.SourceHash
+		// IsSystemTx may be omitted. Defaults to false.
+		if dec.IsSystemTx != nil {
+			itx.IsSystemTransaction = *dec.IsSystemTx
+		}
+
+		if dec.Nonce != nil {
+			inner = &submitTxWithNonce{SubmitTx: itx, EffectiveNonce: uint64(*dec.Nonce)}
+		}
 	default:
 		return ErrTxTypeNotSupported
 	}
@@ -494,3 +540,14 @@ func (tx *depositTxWithNonce) EncodeRLP(w io.Writer) error {
 }
 
 func (tx *depositTxWithNonce) effectiveNonce() *uint64 { return &tx.EffectiveNonce }
+
+type submitTxWithNonce struct {
+	SubmitTx
+	EffectiveNonce uint64
+}
+
+func (tx *submitTxWithNonce) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, tx.SubmitTx)
+}
+
+func (tx *submitTxWithNonce) effectiveNonce() *uint64 { return &tx.EffectiveNonce }
