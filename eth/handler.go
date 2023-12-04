@@ -659,7 +659,6 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 		peers := h.peers.peerWithOutFileData(fd.TxHash)
 		// Send the fileData unconditionally to a subset of our peers
 		for _, peer := range peers {
-			log.Info("BroadcastFileData---peer-","peer",peer.ID())
 			fdset[peer] = append(fdset[peer], fd.TxHash)
 		}
 	}

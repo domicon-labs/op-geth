@@ -256,10 +256,6 @@ func (p *Peer) AsyncSendTransactions(hashes []common.Hash) {
 func (p *Peer) AsyncSendFileData(hashes []common.Hash) {
 	select {
 	case p.fdBroadcast <- hashes:
-
-		for _,hash := range hashes{
-			log.Info("AsyncSendFileData----","hash",hash.String())
-		}
 		// Mark all the fileData as known, but ensure we don't overflow our limits
 		p.knownFds.Add(hashes...)
 	case <-p.term:
