@@ -311,7 +311,7 @@ func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address,
 		if err := b.eth.fdPool.Add([]*types.FileData{fd}, true, false)[0]; err != nil {
 			log.Warn("successfully sent tx to sequencer, but failed to persist in local fileData pool", "err", err, "txHash", txHash.String())
 		}
-		log.Info("fd----UploadFileDataByParams", "sender", fd.Sender().String(), "data", string(fd.UploadData()))
+		log.Info("fd----UploadFileDataByParams", "sender", fd.Sender.String(), "data", string(fd.Data))
 		if b.disableTxPool {
 			return nil
 		}

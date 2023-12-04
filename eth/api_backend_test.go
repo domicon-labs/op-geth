@@ -23,7 +23,6 @@ func TestUploadFileDataByParams(t *testing.T){
 	if err != nil {
 		println("DialContext-----err",err.Error())
 	}
-
 	
 	priv, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
@@ -31,12 +30,11 @@ func TestUploadFileDataByParams(t *testing.T){
 	}
 	sender := crypto.PubkeyToAddress(priv.PublicKey)
 	submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
-	err = client.UploadFileDataByParams(context.TODO(),sender,submitter,1,10,[]byte("11112"),[]byte("commit"),[]byte("sign"),common.BytesToHash([]byte("11111112222222")))
+	err = client.UploadFileDataByParams(context.TODO(),sender,submitter,1,10,[]byte("1111233331111"),[]byte("commit"),[]byte("sign"),common.BytesToHash([]byte("111111122222223333")))
 	if err != nil {
 		println("UploadFileDataByParams---err",err.Error())
 	}
 }
-
 
 
 func TestGetFileDataByHash(t *testing.T){

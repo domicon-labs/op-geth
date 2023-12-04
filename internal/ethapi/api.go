@@ -1555,14 +1555,14 @@ type RPCFileData struct {
 
 func NewRPCFileData(fd *types.FileData) *RPCFileData{
 	result := &RPCFileData{
-		Sender: 	fd.Sender(),
-		Submmiter:  fd.Submitter(),
-		Length:     hexutil.Uint64(fd.DataLength()),
-		Index: 		hexutil.Uint64(fd.Index()),
-		Commitment: hexutil.Bytes(fd.Commitment()),
-		Data:       hexutil.Bytes(fd.UploadData()),
-		Sign:       hexutil.Bytes(fd.Sign()),	
-		TxHash: 	fd.TxHash(),
+		Sender: 	fd.Sender,
+		Submmiter:  fd.Submitter,
+		Length:     hexutil.Uint64(fd.Length),
+		Index: 		hexutil.Uint64(fd.Index),
+		Commitment: hexutil.Bytes(fd.Commitment),
+		Data:       hexutil.Bytes(fd.Data),
+		Sign:       hexutil.Bytes(fd.SignData),	
+		TxHash: 	fd.TxHash,
 	}
 
 	return result

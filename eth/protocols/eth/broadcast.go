@@ -104,11 +104,6 @@ func (p *Peer) broadcastFileData() {
 		// Transfer goroutine may or may not have been started, listen for events
 		select {
 		case hashes := <-p.fdBroadcast:
-			
-			for _,hash := range hashes{
-				log.Info("broadcastFileData---","hash",hash.String())
-			}
-
 			// If the connection failed, discard all fileData events
 			if failed {
 				continue

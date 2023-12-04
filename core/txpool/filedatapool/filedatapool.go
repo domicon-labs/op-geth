@@ -480,13 +480,13 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 	)
 	for i, fd := range fds {
 		// If the transaction is known, pre-set the error slot
-		if fp.all.Get(fd.TxHash()) != nil {
+		if fp.all.Get(fd.TxHash) != nil {
 			errs[i] = ErrAlreadyKnown
 			knownFdMeter.Mark(1)
 			continue
 		}
 
-		txHash := fd.TxHash().String()
+		txHash := fd.TxHash.String()
 
 		log.Info("FilePool----Add","txHash",txHash)
 		// Exclude transactions with basic errors, e.g invalid signatures and
@@ -549,7 +549,7 @@ func (fp *FilePool) addTxsLocked(txs []*types.FileData, local bool) []error {
 // out of the pool due to pricing constraints.
 func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err error) {
 	// If the transaction is already known, discard it
-	hash := fd.TxHash()
+	hash := fd.TxHash
 	if fp.all.Get(hash) != nil {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		knownFdMeter.Mark(1)
@@ -653,7 +653,7 @@ func (t *lookup) Add(fd *types.FileData) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.collector[fd.TxHash()] = fd
+	t.collector[fd.TxHash] = fd
 }
 
 // Remove removes a transaction from the lookup.

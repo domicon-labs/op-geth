@@ -181,7 +181,7 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 			default:
 				otherreject++
 			}
-			added = append(added, batch[j].TxHash())
+			added = append(added, batch[j].TxHash)
 		}
 		knownMeter.Mark(duplicate)
 		otherRejectMeter.Mark(otherreject)

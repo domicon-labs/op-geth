@@ -568,6 +568,11 @@ type testBackend struct {
 	pending *types.Block
 }
 
+// GetFileDataByHash implements Backend.
+func (*testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
+	panic("unimplemented")
+}
+
 func newTestBackend(t *testing.T, n int, gspec *core.Genesis, engine consensus.Engine, generator func(i int, b *core.BlockGen)) *testBackend {
 	var (
 		cacheConfig = &core.CacheConfig{
@@ -596,7 +601,6 @@ func newTestBackend(t *testing.T, n int, gspec *core.Genesis, engine consensus.E
 func (b *testBackend) setPendingBlock(block *types.Block) {
 	b.pending = block
 }
-
 
 // SubscribeNewFileDataEvent implements Backend.
 func (*testBackend) SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription {
