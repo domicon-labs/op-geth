@@ -88,11 +88,13 @@ var caps = []string{
 	"engine_newPayloadV3",
 	"engine_getPayloadBodiesByHashV1",
 	"engine_getPayloadBodiesByRangeV1",
+	
+	"engine_uploadDataFile",
+	"engine_getDataFile",
 }
 
 type ConsensusAPI struct {
 	eth *eth.Ethereum
-
 	remoteBlocks *headerQueue  // Cache of remote payloads received
 	localBlocks  *payloadQueue // Cache of local payloads generated
 
@@ -147,7 +149,7 @@ func newConsensusAPIWithoutHeartbeat(eth *eth.Ethereum) *ConsensusAPI {
 		log.Warn("Engine API started but chain not configured for merge yet")
 	}
 	api := &ConsensusAPI{
-		eth:               eth,
+		eth:               eth,	
 		remoteBlocks:      newHeaderQueue(),
 		localBlocks:       newPayloadQueue(),
 		invalidBlocksHits: make(map[common.Hash]int),
@@ -431,6 +433,38 @@ func (api *ConsensusAPI) ExchangeTransitionConfigurationV1(config engine.Transit
 		return nil, errors.New("invalid terminal block hash")
 	}
 	return &engine.TransitionConfigurationV1{TerminalTotalDifficulty: (*hexutil.Big)(ttd)}, nil
+}
+
+//upload fileData
+func (api *ConsensusAPI) UploadFileData(sender common.Address,submmiter common.Address,index uint64,length uint64,data []byte,commit []byte,sign []byte,txHash common.Hash) (flag bool,err error) { 
+	
+	fd := &types.FileData{
+		Sender: sender,
+		Submitter: submmiter,
+		Index: index,
+		Length: length,
+		Data: data,
+		Commitment: commit,
+		SignData: sign,
+		TxHash: txHash,
+	}
+
+	fds := []*types.FileData{fd}
+	errs := api.eth.FilePool().Add(fds,true,false)
+	if errs[0] != nil {
+		return false,errs[0]
+	}
+	return true,nil 
+}
+
+// getFileData by txHash
+func (api *ConsensusAPI) GetFileDataWithTxHash(txHash common.Hash) (*types.FileData,error){
+	data := api.eth.FilePool().Get(txHash)
+	if data == nil {
+		//disk := api.eth.BlockChain().Db()
+		return nil,errors.New("dont have that fileData with given txHash")
+	}
+	return data,nil
 }
 
 // GetPayloadV1 returns a cached payload by id.
