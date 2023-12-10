@@ -41,7 +41,7 @@ func TestUploadFileDataByParams(t *testing.T){
 	txHash := common.BytesToHash([]byte("1"))
 
 	for  {
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 		sender := crypto.PubkeyToAddress(priv.PublicKey)
 		submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
 		err = client.UploadFileDataByParams(context.TODO(),sender,submitter,uint64(index),uint64(length),data,commit,sign,txHash)
