@@ -33,7 +33,7 @@ func TestUploadFileDataByParams(t *testing.T){
 	}
 	
 	index := 0
-	length := 10
+	length := 1024
 	commit := []byte("commit")
 	s := strconv.Itoa(index)
 	data := bytes.Repeat([]byte(s), 1024)

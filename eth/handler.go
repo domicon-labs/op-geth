@@ -666,6 +666,7 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 	for peer, hashes := range fdset {
 		directPeers++
 		directCount += len(hashes)
+		log.Info("BroadcastFileData----","peer info",peer.Info().Enode,"peer id",peer.ID())
 		peer.AsyncSendFileData(hashes)
 	}
 

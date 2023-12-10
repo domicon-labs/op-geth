@@ -233,7 +233,7 @@ func (p *Peer) SendFileDatas(fds []*types.FileData) error{
 	for _, fd := range fds {
 		p.knownTxs.Add(fd.TxHash)
 	}
-	log.Info("SendFileDatas----","FileDataMsg",FileDataMsg,"fds length",len(fds))
+	log.Info("SendFileDatas----","FileDataMsg",FileDataMsg,"fds length",len(fds),"peer id",p.ID())
 	return p2p.Send(p.rw, FileDataMsg, fds)
 }
 
