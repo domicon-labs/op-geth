@@ -316,7 +316,6 @@ func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address,
 			return nil
 		}
 	}
-
 	return b.eth.fdPool.Add([]*types.FileData{fd}, true, false)[0]
 	//return nil
 }

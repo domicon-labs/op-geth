@@ -500,12 +500,18 @@ func handlePooledTransactions(backend Backend, msg Decoder, peer *Peer) error {
 	return backend.Handle(peer, &txs.PooledTransactionsResponse)
 }
 
+
+var fileDataReceiveTimes uint64
+
 func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	// FileDatas can be processed, parse all of them and deliver to the pool
 	var fds FileDataPacket
 	if err := msg.Decode(&fds); err != nil {
 		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
 	}
+
+	fileDataReceiveTimes++
+
 	for i, fd := range fds {
 		// Validate and mark the remote fileData
 		if fd == nil {
@@ -515,6 +521,7 @@ func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 		log.Info("handleFileDatas---","data",string(fd.Data))
 		peer.markFileData(fd.TxHash)
 	}
+	log.Info("handleFileDatas----收到了FileDataPacket","fileDataReceiveTimes",fileDataReceiveTimes)
 	return backend.Handle(peer, &fds)
 }
 
@@ -529,7 +536,7 @@ func handleGetPooledFileDatas(backend Backend,msg Decoder,peer *Peer) error {
 }
 
 func answerGetPooledFileDatas(backend Backend, query GetPooledFileDatasRequest) ([]common.Hash, []rlp.RawValue) {
-	// Gather transactions until the fetch or network limits is reached
+	// Gather fileDatas until the fetch or network limits is reached
 	var (
 		bytes  int
 		hashes []common.Hash
@@ -537,7 +544,7 @@ func answerGetPooledFileDatas(backend Backend, query GetPooledFileDatasRequest) 
 	)
 	for _, hash := range query {
 		
-		// Retrieve the requested transaction, skipping if unknown to us
+		// Retrieve the requested fileData, skipping if unknown to us
 		fd := backend.FildDataPool().Get(hash)
 		if fd == nil {
 			continue

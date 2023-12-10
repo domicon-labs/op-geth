@@ -1,8 +1,11 @@
 package eth
 
 import (
+	"bytes"
 	"context"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -23,17 +26,37 @@ func TestUploadFileDataByParams(t *testing.T){
 	if err != nil {
 		println("DialContext-----err",err.Error())
 	}
-	
+
 	priv, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
 		println("HexToECDSA---err",err.Error())
 	}
-	sender := crypto.PubkeyToAddress(priv.PublicKey)
-	submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
-	err = client.UploadFileDataByParams(context.TODO(),sender,submitter,1,10,[]byte("1111233331111"),[]byte("commit"),[]byte("sign"),common.BytesToHash([]byte("111111122222223333")))
-	if err != nil {
-		println("UploadFileDataByParams---err",err.Error())
+	
+	index := 0
+	length := 10
+	commit := []byte("commit")
+	s := strconv.Itoa(index)
+	data := bytes.Repeat([]byte(s), 1024)
+	sign := []byte("sign")
+	txHash := common.BytesToHash([]byte("1"))
+
+	for  {
+		time.Sleep(1 * time.Second)
+		sender := crypto.PubkeyToAddress(priv.PublicKey)
+		submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
+		err = client.UploadFileDataByParams(context.TODO(),sender,submitter,uint64(index),uint64(length),data,commit,sign,txHash)
+		if err != nil {
+			println("UploadFileDataByParams---err",err.Error())
+		}
+		index++
+		s := strconv.Itoa(index)
+		bytes.Repeat([]byte(s), 1024)
+		data = []byte(string(data))
+		txHash = common.BytesToHash([]byte(s))
+
+		println("发送的交易哈希是txHash: ",txHash.String(),"data: ",s,"data length: ",len(data))
 	}
+	
 }
 
 
@@ -45,7 +68,7 @@ func TestGetFileDataByHash(t *testing.T){
 	}
 
 	
-	fileData,err := client.GetFileDataByHash(context.TODO(),common.BytesToHash([]byte("11111112222222")))
+	fileData,err := client.GetFileDataByHash(context.TODO(),common.BytesToHash([]byte("111111122222223333")))
 	if err != nil {
 		println("GetFileDataByHash---err",err.Error())
 	}
