@@ -376,6 +376,7 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	// a uniform initialization/teardown mechanism
 	snap, err := h.peers.waitSnapExtension(peer)
 	if err != nil {
+		log.Info("runEthPeer----","Snapshot---err",err.Error())
 		peer.Log().Error("Snapshot extension barrier failed", "err", err)
 		return err
 	}
@@ -390,6 +391,7 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	)
 	forkID := forkid.NewID(h.chain.Config(), genesis, number, head.Time)
 	if err := peer.Handshake(h.networkID, td, hash, genesis.Hash(), forkID, h.forkFilter); err != nil {
+		log.Info("runEthPeer----","peer info",peer.Info().Enode,"peer id",peer.ID(),"err",err.Error())
 		peer.Log().Debug("Ethereum handshake failed", "err", err)
 		return err
 	}
