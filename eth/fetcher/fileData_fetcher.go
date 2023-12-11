@@ -146,15 +146,14 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 	)
 	if !direct {
 		inMeter = fdBroadcastInMeter
-		knownMeter = fdBroadcastInMeter
+		knownMeter = fdBroadcastKnownMeter
 		otherRejectMeter = fdBroadcastOtherRejectMeter
 	}
 
 	// Keep track of all the propagated transactions
 	inMeter.Mark(int64(len(fds)))
 
-	// Push all the transactions into the pool, tracking underpriced ones to avoid
-	// re-requesting them and dropping the peer in case of malicious transfers.
+	// Push all the fileDate into the pool
 	var (
 		added = make([]common.Hash, 0, len(fds))
 	)
@@ -170,18 +169,18 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 		)
 		batch := fds[i:end]
 
-		for j, err := range f.addFds(batch) {
+		for _, err := range f.addFds(batch) {
 			// Track a few interesting failure types
 			switch {
 			case err == nil: // Noop, but need to handle to not count these
-
+				
 			case errors.Is(err, filedatapool.ErrAlreadyKnown):
 				duplicate++
 
 			default:
 				otherreject++
 			}
-			added = append(added, batch[j].TxHash)
+			//added = append(added, batch[j].TxHash)
 		}
 		knownMeter.Mark(duplicate)
 		otherRejectMeter.Mark(otherreject)
