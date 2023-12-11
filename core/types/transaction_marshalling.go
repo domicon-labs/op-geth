@@ -161,7 +161,15 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 			enc.Mint = (*hexutil.Big)(itx.Mint)
 		}
 		enc.IsSystemTx = &itx.IsSystemTransaction
-		// other fields will show up as null.
+	// other fields will show up as null.
+	case *SubmitTx:
+		enc.Gas = (*hexutil.Uint64)(&itx.Gas)
+		enc.Value = (*hexutil.Big)(itx.Value)
+		enc.Input = (*hexutil.Bytes)(&itx.Data)
+		enc.To = tx.To()
+		enc.SourceHash = &itx.SourceHash
+		enc.From = &itx.From
+		enc.IsSystemTx = &itx.IsSystemTransaction
 	}
 	return json.Marshal(&enc)
 }
