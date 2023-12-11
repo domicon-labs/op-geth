@@ -233,7 +233,7 @@ func (p *Peer) SendFileDatas(fds []*types.FileData) error{
 	for _, fd := range fds {
 		p.knownTxs.Add(fd.TxHash)
 	}
-	log.Info("SendFileDatas----","FileDataMsg",FileDataMsg,"fds length",len(fds))
+	log.Info("SendFileDatas----","FileDataMsg",FileDataMsg,"fds length",len(fds),"peer id",p.ID())
 	return p2p.Send(p.rw, FileDataMsg, fds)
 }
 
@@ -313,6 +313,7 @@ func (p *Peer) ReplyPooledTransactionsRLP(id uint64, hashes []common.Hash, txs [
 	})
 }
 
+// ReplyPooledFileDatasRLP is the response to RequestTxs.
 func (p *Peer) ReplyPooledFileDatasRLP(id uint64, hashes []common.Hash, fds []rlp.RawValue) error {
 	// Mark all the fileData as known, but ensure we don't overflow our limits
 	p.knownFds.Add(hashes...)
@@ -534,15 +535,15 @@ func (p *Peer) RequestTxs(hashes []common.Hash) error {
 }
 
 
-// RequestTxs fetches a batch of transactions from a remote node.
+// RequestFileDatas fetches a batch of fileDatas from a remote node.
 func (p *Peer) RequestFileDatas(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of transactions", "count", len(hashes))
+	p.Log().Debug("Fetching batch of fileDatas", "count", len(hashes))
 	id := rand.Uint64()
 
 	requestTracker.Track(p.id, p.version, GetPooledTransactionsMsg, PooledTransactionsMsg, id)
-	return p2p.Send(p.rw, GetPooledTransactionsMsg, &GetPooledTransactionsPacket{
+	return p2p.Send(p.rw, GetPooledFileDatasMsg, &GetPooledFileDataPacket{
 		RequestId:                    id,
-		GetPooledTransactionsRequest: hashes,
+		GetPooledFileDatasRequest: hashes,
 	})
 }
 

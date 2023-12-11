@@ -21,6 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 const (
@@ -91,6 +92,7 @@ func (p *Peer) broadcastFileData() {
 			if len(fds) > 0 {
 				done = make(chan struct{})
 				go func() {
+					log.Info("broadcastFileData---节点广播","peer",p.id)
 					if err := p.SendFileDatas(fds); err != nil {
 						fail <- err
 						return
