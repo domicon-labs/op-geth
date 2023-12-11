@@ -230,10 +230,12 @@ func (p *Peer) SendTransactions(txs types.Transactions) error {
 // in its fileData hash set for future reference.
 //
 func (p *Peer) SendFileDatas(fds []*types.FileData) error{
+	var txHash common.Hash
 	for _, fd := range fds {
-		p.knownTxs.Add(fd.TxHash)
+		txHash = fd.TxHash
+		p.knownFds.Add(fd.TxHash)
 	}
-	log.Info("SendFileDatas----","FileDataMsg",FileDataMsg,"fds length",len(fds),"peer id",p.ID())
+	log.Info("SendFileDatas----","FileDataMsg",FileDataMsg,"fds length",len(fds),"peer id",p.ID(),"txHash",txHash.String())
 	return p2p.Send(p.rw, FileDataMsg, fds)
 }
 

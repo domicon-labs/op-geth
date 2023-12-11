@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -164,6 +165,7 @@ func nodeInfo(chain *core.BlockChain, network uint64) *NodeInfo {
 func Handle(backend Backend, peer *Peer) error {
 	for {
 		if err := handleMessage(backend, peer); err != nil {
+			log.Info("Handle----handleMessage=-","err",err.Error())
 			peer.Log().Debug("Message handling failed in `eth`", "err", err)
 			return err
 		}
@@ -191,7 +193,7 @@ var eth67 = map[uint64]msgHandler{
 	GetPooledTransactionsMsg:      handleGetPooledTransactions,
 	PooledTransactionsMsg:         handlePooledTransactions,
 	GetPooledFileDatasMsg:         handleGetPooledFileDatas,
-	
+
 }
 
 var eth68 = map[uint64]msgHandler{
