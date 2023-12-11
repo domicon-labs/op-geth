@@ -32,13 +32,13 @@ func TestUploadFileDataByParams(t *testing.T){
 		println("HexToECDSA---err",err.Error())
 	}
 	
-	index := 0
+	index := 2
 	length := 1024
 	commit := []byte("commit")
 	s := strconv.Itoa(index)
 	data := bytes.Repeat([]byte(s), 1024)
 	sign := []byte("sign")
-	txHash := common.BytesToHash([]byte("1"))
+	txHash := common.BytesToHash([]byte("2"))
 
 	for  {
 		time.Sleep(500 * time.Millisecond)
