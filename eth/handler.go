@@ -317,6 +317,10 @@ func newHandler(config *handlerConfig) (*handler, error) {
 		if p == nil {
 			return errors.New("unknown peer")
 		}
+
+		for _,hash := range hashes {
+			log.Info("fetchFd----","peer",peer,"hash",hash)
+		}
 		return p.RequestFileDatas(hashes)
 	}
 	addFds := func(fds []*types.FileData) []error {

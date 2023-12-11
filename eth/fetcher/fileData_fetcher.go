@@ -150,7 +150,7 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 		otherRejectMeter = fdBroadcastOtherRejectMeter
 	}
 
-	// Keep track of all the propagated transactions
+	// Keep track of all the propagated fileData
 	inMeter.Mark(int64(len(fds)))
 
 	// Push all the fileDate into the pool
@@ -169,6 +169,7 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 		)
 		batch := fds[i:end]
 
+		log.Info("FileDataFetcher-----Enqueue----1")
 		for _, err := range f.addFds(batch) {
 			// Track a few interesting failure types
 			switch {
@@ -191,6 +192,8 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 			log.Warn("Peer delivering stale transactions", "peer", peer, "rejected", otherreject)
 		}
 	}
+
+	log.Info("FileDataFetcher-----Enqueue----2")
 	select {
 	case f.cleanup <- &fdDelivery{origin: peer, hashes: added, direct: direct}:
 		return nil
@@ -397,6 +400,7 @@ func (f *FileDataFetcher) loop() {
 			f.rescheduleTimeout(timeoutTimer, timeoutTrigger)
 
 		case delivery := <-f.cleanup:
+			log.Info("FileDataFetcher---loop---1","delivery.direct",delivery.direct)
 			// In case of a direct delivery, also reschedule anything missing
 			// from the original query
 			if delivery.direct {
@@ -449,6 +453,7 @@ func (f *FileDataFetcher) loop() {
 					delete(f.alternates, hash)
 					delete(f.fetching, hash)
 				}
+				log.Info("FileDataFetcher---loop---2","走到这了---")
 				// Something was delivered, try to reschedule requests
 				f.scheduleFetches(timeoutTimer, timeoutTrigger, nil) // Partial delivery may enable others to deliver too
 			}
@@ -623,7 +628,7 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			fdRequestOutMeter.Mark(int64(len(hashes)))
 
 			go func(peer string, hashes []common.Hash) {
-				// Try to fetch the transactions, but in case of a request
+				// Try to fetch the fileData, but in case of a request
 				// failure (e.g. peer disconnected), reschedule the hashes.
 				if err := f.fetchFds(peer, hashes); err != nil {
 					fdRequestFailMeter.Mark(int64(len(hashes)))

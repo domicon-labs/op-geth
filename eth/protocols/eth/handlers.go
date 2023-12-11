@@ -509,6 +509,12 @@ func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	if err := msg.Decode(&fds); err != nil {
 		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
 	}
+	
+	flag := peer.knownFds.Contains(fds[0].TxHash)
+	if flag {
+		log.Info("handleFileDatas----收到了相同的","txHash",fds[0].TxHash.String())
+		return nil
+	}
 
 	fileDataReceiveTimes++
 
