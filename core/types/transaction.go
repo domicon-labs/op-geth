@@ -335,6 +335,9 @@ func (tx *Transaction) SourceHash() common.Hash {
 	if dep, ok := tx.inner.(*DepositTx); ok {
 		return dep.SourceHash
 	}
+	if dep, ok := tx.inner.(*SubmitTx); ok {
+		return dep.SourceHash
+	}
 	return common.Hash{}
 }
 
