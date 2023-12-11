@@ -518,7 +518,6 @@ func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 			return fmt.Errorf("%w: fileData %d is nil", errDecode, i)
 		}
 		log.Info("handleFileDatas----","TxHash",fd.TxHash)
-		log.Info("handleFileDatas---","data",string(fd.Data))
 		peer.markFileData(fd.TxHash)
 	}
 	log.Info("handleFileDatas----收到了FileDataPacket","fileDataReceiveTimes",fileDataReceiveTimes)
