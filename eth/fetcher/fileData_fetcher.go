@@ -169,7 +169,6 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 		)
 		batch := fds[i:end]
 
-		log.Info("FileDataFetcher-----Enqueue----1")
 		for _, err := range f.addFds(batch) {
 			// Track a few interesting failure types
 			switch {
@@ -192,18 +191,15 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 			log.Warn("Peer delivering stale transactions", "peer", peer, "rejected", otherreject)
 		}
 	}
-
-	log.Info("FileDataFetcher-----Enqueue----2")
 	if !direct {
 		select {
 		case f.cleanup <- &fdDelivery{origin: peer, hashes: added, direct: direct}:
-			log.Info("FileDataFetcher-----Enqueue----3")
 			return nil
 		case <-f.quit:
 			return errTerminated
 		}
 	}
-	log.Info("FileDataFetcher-----Enqueue----4")
+
 	return nil
 }
 

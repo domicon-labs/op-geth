@@ -108,12 +108,7 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 		return h.txFetcher.Enqueue(peer.ID(), *packet, true)
 
 	case *eth.FileDataPacket:
-		log.Info("Handle----FileDataPacket","FileDataPacket",*packet)
-		err := h.fdFetcher.Enqueue(peer.ID(), *packet, true)
-		if err != nil {
-			log.Info("Handle----FileDataPacket","err",err.Error())
-		}
-		return nil
+		return h.fdFetcher.Enqueue(peer.ID(), *packet, true)
 		
 
 	default:
