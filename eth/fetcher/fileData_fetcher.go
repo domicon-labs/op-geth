@@ -194,13 +194,17 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 	}
 
 	log.Info("FileDataFetcher-----Enqueue----2")
-	select {
-	case f.cleanup <- &fdDelivery{origin: peer, hashes: added, direct: direct}:
-		log.Info("FileDataFetcher-----Enqueue----3")
-		return nil
-	case <-f.quit:
-		return errTerminated
+	if !direct {
+		select {
+		case f.cleanup <- &fdDelivery{origin: peer, hashes: added, direct: direct}:
+			log.Info("FileDataFetcher-----Enqueue----3")
+			return nil
+		case <-f.quit:
+			return errTerminated
+		}
 	}
+	log.Info("FileDataFetcher-----Enqueue----4")
+	return nil
 }
 
 // Drop should be called when a peer disconnects. It cleans up all the internal
