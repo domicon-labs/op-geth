@@ -91,7 +91,7 @@ type fileDataPool interface {
 
 	// Get retrieves the fileData from local fileDataPool with given
 	// tx hash.
-	Get(hash common.Hash) *types.FileData
+	Get(hash common.Hash) (*types.FileData,error)
 
 	// Add should add the given transactions to the pool.
 	Add(fds []*types.FileData, local bool, sync bool) []error

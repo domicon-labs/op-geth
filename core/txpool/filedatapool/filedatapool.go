@@ -80,7 +80,7 @@ type FilePool struct {
 	collector       map[common.Hash]*types.FileData
 	beats           map[common.Hash]time.Time // Last heartbeat from each known account
 	//diskSaveCh      chan []common.Hash  // move fileData from memory pool to disk 
-	reqResetCh      chan *fppoolResetRequest
+	//reqResetCh      chan *fppoolResetRequest
 	reorgDoneCh     chan chan struct{}
 	reorgShutdownCh chan struct{}  // requests shutdown of scheduleReorgLoop
 	wg              sync.WaitGroup // tracks loop, scheduleReorgLoop
@@ -96,7 +96,7 @@ func New(config Config, chain BlockChain) *FilePool {
 		all:             newLookup(),
 		collector:       make(map[common.Hash]*types.FileData),
 		beats:           make(map[common.Hash]time.Time),
-		reqResetCh:      make(chan *fppoolResetRequest),
+		//reqResetCh:      make(chan *fppoolResetRequest),
 		//diskSaveCh:      make(chan []common.Hash),
 		reorgDoneCh:     make(chan chan struct{}),
 		reorgShutdownCh: make(chan struct{}),
@@ -404,7 +404,6 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 		return err
 	}
 	diskDb.Put(hash[:], data)
-
 	fp.removeFileData(hash)
 	return nil
 }
@@ -429,12 +428,26 @@ func (fp *FilePool) Has(hash common.Hash) bool{
 
 // Get retrieves the fileData from local fileDataPool with given
 // tx hash.
-func (fp *FilePool) Get(hash common.Hash) *types.FileData{
+func (fp *FilePool) Get(hash common.Hash) (*types.FileData,error){
 	fd := fp.get(hash)
 	if fd == nil {
-		return nil
+		diskDb := fp.currentState.Database().DiskDB()
+		data,err := diskDb.Get(hash[:])
+		if err != nil {
+			return nil,err
+		}
+		if len(data) > 0 {
+			var fileData types.FileData
+			err = rlp.DecodeBytes(data,&fileData) 
+			if err != nil {
+				return nil,err
+			}
+			return &fileData,nil
+		}else {
+			return nil,err
+		}	
 	}
-	return fd
+	return fd,nil
 }
 
 
@@ -636,8 +649,8 @@ func (t *lookup) Get(hash common.Hash) *types.FileData {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	if tx := t.collector[hash]; tx != nil {
-		return tx
+	if fd := t.collector[hash]; fd != nil {
+		return fd
 	}
 	return nil
 }
@@ -666,6 +679,6 @@ func (t *lookup) Remove(hash common.Hash) {
 	delete(t.collector, hash)
 }
 
-type fppoolResetRequest struct {
-	oldHead, newHead *types.Header
-}
+// type fppoolResetRequest struct {
+// 	oldHead, newHead *types.Header
+// }

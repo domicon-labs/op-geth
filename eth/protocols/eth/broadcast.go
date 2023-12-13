@@ -82,7 +82,7 @@ func (p *Peer) broadcastFileData() {
 				//size        common.StorageSize
 			)
 			for i := 0; i < len(queue) ; i++ {
-				if fd := p.fdpool.Get(queue[i]); fd != nil {
+				if fd,err := p.fdpool.Get(queue[i]); fd != nil && err == nil{
 					fds = append(fds, fd)
 				}
 				hashesCount++

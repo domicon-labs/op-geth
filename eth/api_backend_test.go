@@ -40,7 +40,7 @@ func TestUploadFileDataByParams(t *testing.T){
 	sign := []byte("sign")
 	txHash := common.BytesToHash([]byte("2"))
 
-	for  {
+	// for  {
 		time.Sleep(500 * time.Millisecond)
 		sender := crypto.PubkeyToAddress(priv.PublicKey)
 		submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
@@ -48,14 +48,14 @@ func TestUploadFileDataByParams(t *testing.T){
 		if err != nil {
 			println("UploadFileDataByParams---err",err.Error())
 		}
-		index++
-		s := strconv.Itoa(index)
-		bytes.Repeat([]byte(s), 1024)
-		data = []byte(string(data))
-		txHash = common.BytesToHash([]byte(s))
+		//index++
+		// s := strconv.Itoa(index)
+		// bytes.Repeat([]byte(s), 1024)
+		// data = []byte(string(data))
+		// txHash = common.BytesToHash([]byte(s))
 
 		println("发送的交易哈希是txHash: ",txHash.String(),"data: ",s,"data length: ",len(data))
-	}
+	// }
 	
 }
 
@@ -68,7 +68,7 @@ func TestGetFileDataByHash(t *testing.T){
 	}
 
 	
-	fileData,err := client.GetFileDataByHash(context.TODO(),common.BytesToHash([]byte("111111122222223333")))
+	fileData,err := client.GetFileDataByHash(context.TODO(),common.BytesToHash([]byte("2")))
 	if err != nil {
 		println("GetFileDataByHash---err",err.Error())
 	}
@@ -83,9 +83,9 @@ func TestDiskFileData(t *testing.T) {
 		println("DialContext-----err",err.Error())
 	}
 
-	flag,err := client.DiskSaveFileDataWithHash(context.TODO(),common.BytesToHash([]byte("111111122222223333")))
+	flag,err := client.DiskSaveFileDataWithHash(context.TODO(),common.BytesToHash([]byte("2")))
 	if err != nil {
 		println("DiskSaveFileDataWithHash----err",err.Error())
 	}
-	log.Info("test-----","flag",flag,"err",err.Error())
+	log.Info("test-----","flag",flag)
 }

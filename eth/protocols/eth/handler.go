@@ -96,7 +96,7 @@ type TxPool interface {
 // FileDataPool defines the methods needed by the protocol handler to serve fileData.
 type FileDataPool interface {
 	// Get retrieves the fileData from the local fileDatapool with the given hash.
-	Get(hash common.Hash) *types.FileData
+	Get(hash common.Hash) (*types.FileData,error)
 }
 
 

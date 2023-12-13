@@ -311,21 +311,18 @@ func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address,
 		if err := b.eth.fdPool.Add([]*types.FileData{fd}, true, false)[0]; err != nil {
 			log.Warn("successfully sent tx to sequencer, but failed to persist in local fileData pool", "err", err, "txHash", txHash.String())
 		}
-		log.Info("fd----UploadFileDataByParams", "sender", fd.Sender.String(), "data", string(fd.Data))
-		if b.disableTxPool {
-			return nil
-		}
 	}
 	return b.eth.fdPool.Add([]*types.FileData{fd}, true, false)[0]
 	//return nil
 }
 
 func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,error){
-	 fd := b.eth.fdPool.Get(hash)
+	log.Info("EthAPIBackend-----GetFileDataByHash","txHash",hash.String())
+	fd,err := b.eth.fdPool.Get(hash)
 	 if fd != nil {
 		return fd,nil
 	 }
-	 return nil,errors.New("dont have that fileData with given hash")
+	 return nil,err
 }
 
 func (b *EthAPIBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
@@ -378,7 +375,11 @@ func (b *EthAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction 
 }
 
 func (b *EthAPIBackend) GetPoolFileData(hash common.Hash) *types.FileData {
-	return b.eth.fdPool.Get(hash)
+	fd,err := b.eth.fdPool.Get(hash)
+	if err != nil {
+		log.Info("GetPoolFileData---get","err",err.Error())
+	}
+	return fd
 }
 
 func (b *EthAPIBackend) GetTransaction(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, error) {
