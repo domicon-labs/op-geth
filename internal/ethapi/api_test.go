@@ -568,6 +568,11 @@ type testBackend struct {
 	pending *types.Block
 }
 
+// DiskSaveFileDataWithHash implements Backend.
+func (*testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
+	panic("unimplemented")
+}
+
 // GetFileDataByHash implements Backend.
 func (*testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
 	panic("unimplemented")

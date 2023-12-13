@@ -328,6 +328,14 @@ func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,err
 	 return nil,errors.New("dont have that fileData with given hash")
 }
 
+func (b *EthAPIBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
+	err := b.eth.fdPool.SaveFileDataToDisk(hash)
+	if err != nil {
+		return false,err
+	}
+	return true,nil
+}
+
 func (b *EthAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
 	if b.eth.seqRPCService != nil {
 		data, err := signedTx.MarshalBinary()

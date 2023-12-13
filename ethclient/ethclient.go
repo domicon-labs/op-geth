@@ -315,6 +315,13 @@ func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (rpcFi
 	return fd,err
 }
 
+func (ec *Client) DiskSaveFileDataWithHash(ctx context.Context,hash common.Hash) (bool,error){
+	var flag bool
+	err := ec.c.CallContext(ctx,&flag,"eth_diskSaveFileDataWithHash",hash)	
+	return flag,err
+}
+
+
 // TransactionInBlock returns a single transaction at index in the given block.
 func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
 	var json *rpcTransaction

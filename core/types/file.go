@@ -56,6 +56,11 @@ func (f *FileData) UnmarshalJSON(data []byte) error {
 	return rlp.DecodeBytes(data,f)
 } 
 
+func (f *FileData) Size() uint64 {
+	data,_ := rlp.EncodeToBytes(f)
+	return uint64(len(data))
+}
+
 type FileDatas []*FileData
 
 func (f FileDatas) Len() int { return len(f) }

@@ -88,6 +88,7 @@ type Backend interface {
 	UploadFileDataByParams(sender,submitter common.Address,index,length uint64,commitment,data,signData []byte,txHash common.Hash) error
 	UploadFileData(data []byte) error
 	GetFileDataByHash(hash common.Hash) (*types.FileData,error)
+	DiskSaveFileDataWithHash(hash common.Hash) (bool,error)
 	SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription
 
 	ChainConfig() *params.ChainConfig

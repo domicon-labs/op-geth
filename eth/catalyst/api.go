@@ -467,6 +467,15 @@ func (api *ConsensusAPI) GetFileDataWithTxHash(txHash common.Hash) (*types.FileD
 	return data,nil
 }
 
+func (api *ConsensusAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
+	err := api.eth.FilePool().SaveFileDataToDisk(hash)
+	if err != nil {
+		return false,err
+	}
+	return true,nil
+}
+
+
 // GetPayloadV1 returns a cached payload by id.
 func (api *ConsensusAPI) GetPayloadV1(payloadID engine.PayloadID) (*engine.ExecutableData, error) {
 	data, err := api.getPayload(payloadID, false)

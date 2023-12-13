@@ -212,6 +212,11 @@ type backendMock struct {
 	config  *params.ChainConfig
 }
 
+// DiskSaveFileDataWithHash implements Backend.
+func (*backendMock) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
+	panic("unimplemented")
+}
+
 // SubscribeNewFileDataEvent implements Backend.
 func (*backendMock) SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription {
 	return nil
@@ -227,8 +232,8 @@ func (*backendMock) UploadFileDataByParams(sender common.Address, submitter comm
 	return nil
 }
 
-func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData,error){
-	return nil,nil
+func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
+	return nil, nil
 }
 
 func newBackendMock() *backendMock {

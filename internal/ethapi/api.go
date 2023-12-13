@@ -1899,6 +1899,11 @@ func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error){
 	return rpcFd,err
 }
 
+func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
+    flag,err :=	f.b.DiskSaveFileDataWithHash(hash)
+	return flag,err
+}
+
 // TransactionAPI exposes methods for reading and creating transaction data.
 type TransactionAPI struct {
 	b         Backend

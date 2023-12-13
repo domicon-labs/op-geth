@@ -79,7 +79,7 @@ type FilePool struct {
 	all             *lookup
 	collector       map[common.Hash]*types.FileData
 	beats           map[common.Hash]time.Time // Last heartbeat from each known account
-	// diskSaveCh      chan []*types.Receipt
+	//diskSaveCh      chan []common.Hash  // move fileData from memory pool to disk 
 	reqResetCh      chan *fppoolResetRequest
 	reorgDoneCh     chan chan struct{}
 	reorgShutdownCh chan struct{}  // requests shutdown of scheduleReorgLoop
@@ -97,7 +97,7 @@ func New(config Config, chain BlockChain) *FilePool {
 		collector:       make(map[common.Hash]*types.FileData),
 		beats:           make(map[common.Hash]time.Time),
 		reqResetCh:      make(chan *fppoolResetRequest),
-		// diskSaveCh:      make(chan []*types.Receipt),
+		//diskSaveCh:      make(chan []common.Hash),
 		reorgDoneCh:     make(chan chan struct{}),
 		reorgShutdownCh: make(chan struct{}),
 		initDoneCh:      make(chan struct{}),
@@ -391,7 +391,7 @@ func (fp *FilePool) SubscribenFileDatas(ch chan<- core.NewFileDataEvent) event.S
 	return fp.fileDataFeed.Subscribe(ch)
 }
 
-func (fp *FilePool) saveFileDataToDisk(hash common.Hash) error {
+func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	fileData, ok := fp.all.collector[hash]
 	if !ok {
 		return errors.New("file pool dont have fileData")
@@ -404,13 +404,15 @@ func (fp *FilePool) saveFileDataToDisk(hash common.Hash) error {
 		return err
 	}
 	diskDb.Put(hash[:], data)
+
+	fp.removeFileData(hash)
 	return nil
 }
 
 func (fp *FilePool) removeFileData(hash common.Hash) error {
-	tx := fp.all.Get(hash)
-	if tx == nil {
-		return errors.New("fileData with that tx hash not exist")
+	fd := fp.all.Get(hash)
+	if fd == nil {
+		return errors.New("fileData with that fd hash not exist")
 	}
 	delete(fp.beats, hash)
 	fp.all.Remove(hash)
