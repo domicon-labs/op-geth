@@ -76,3 +76,16 @@ func TestGetFileDataByHash(t *testing.T){
 	log.Info("test-----","fileData",fileData)
 	
 }
+
+func TestDiskFileData(t *testing.T) {
+	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	if err != nil {
+		println("DialContext-----err",err.Error())
+	}
+
+	flag,err := client.DiskSaveFileDataWithHash(context.TODO(),common.BytesToHash([]byte("111111122222223333")))
+	if err != nil {
+		println("DiskSaveFileDataWithHash----err",err.Error())
+	}
+	log.Info("test-----","flag",flag,"err",err.Error())
+}

@@ -48,6 +48,11 @@ type LesApiBackend struct {
 	gpo                 *gasprice.Oracle
 }
 
+// DiskSaveFileDataWithHash implements ethapi.Backend.
+func (*LesApiBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
+	panic("unimplemented")
+}
+
 // GetFileDataByHash implements ethapi.Backend.
 func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
 	panic("unimplemented")
