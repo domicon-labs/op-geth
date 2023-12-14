@@ -657,15 +657,27 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 		directCount int // Number of fileData sent directly to peers (duplicates included)
 		directPeers int // Number of peers that were sent fileData directly
 		
+		annCount    int // Number of fileDatas announced across all peers (duplicates included)
+		annPeers    int // Number of peers announced about fileDatas
+
 		fdset = make(map[*ethPeer][]common.Hash)
+		annos = make(map[*ethPeer][]common.Hash) // Set peer->hash to announce
 	)
 
+	//numDirect := 1
 	for _,fd := range fds {
 		log.Info("BroadcastFileData---","需要广播的fileData",fd.TxHash.String())
 		peers := h.peers.peerWithOutFileData(fd.TxHash)
+		// TODO dont do broadcast fileData directly 
 		// Send the fileData unconditionally to a subset of our peers
-		for _, peer := range peers {
-			fdset[peer] = append(fdset[peer], fd.TxHash)
+		// for _, peer := range peers[:numDirect] {
+		// 	fdset[peer] = append(fdset[peer], fd.TxHash)
+		// }
+
+		// For the remaining peers, send announcement only
+		//for _, peer := range peers[numDirect:] {
+			for _, peer := range peers {	
+			annos[peer] = append(annos[peer], fd.TxHash)
 		}
 	}
 
@@ -674,6 +686,13 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 		directCount += len(hashes)
 		log.Info("BroadcastFileData----","peer info",peer.Info().Enode,"peer id",peer.ID())
 		peer.AsyncSendFileData(hashes)
+	}
+
+	for peer, hashes := range annos {
+		annPeers++
+		annCount += len(hashes)
+		log.Info("BroadcastFileData----hash","peer info",peer.Info().Enode,"peer id",peer.ID())
+		peer.AsyncSendPooledFileDataHashes(hashes)
 	}
 
 	log.Debug("Distributed fileData","bcastpeers", directPeers, "bcastcount", directCount,"plainfds",len(fds))

@@ -189,11 +189,12 @@ var eth67 = map[uint64]msgHandler{
 	BlockBodiesMsg:                handleBlockBodies,
 	GetReceiptsMsg:                handleGetReceipts,
 	ReceiptsMsg:                   handleReceipts,
-	FileDataMsg:				   handleFileDatas,
 	GetPooledTransactionsMsg:      handleGetPooledTransactions,
+	FileDataMsg:				   handleFileDatas,
 	PooledTransactionsMsg:         handlePooledTransactions,
 	GetPooledFileDatasMsg:         handleGetPooledFileDatas,
-
+	NewPooledFileDataHashesMsg:    handleNewPooledFileDataHashes67,
+	PooledFileDatasMsg:			   handlePooledFileDatas,
 }
 
 var eth68 = map[uint64]msgHandler{
@@ -211,6 +212,8 @@ var eth68 = map[uint64]msgHandler{
 	PooledTransactionsMsg:         handlePooledTransactions,
 	FileDataMsg:				   handleFileDatas,
 	GetPooledFileDatasMsg:         handleGetPooledFileDatas,
+	NewPooledFileDataHashesMsg:    handleNewPooledFileDataHashes68,
+	PooledFileDatasMsg:			   handlePooledFileDatas,
 }
 
 // handleMessage is invoked whenever an inbound message is received from a remote

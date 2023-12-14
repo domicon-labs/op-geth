@@ -66,6 +66,7 @@ const (
 	FileDataMsg          		  = 0x0c
 	PooledFileDatasMsg            = 0x0b
 	GetPooledFileDatasMsg         = 0x0d
+	NewPooledFileDataHashesMsg    = 0x0e
 )
 
 var (
@@ -347,6 +348,15 @@ type PooledFileDataPacket struct {
 	PooledFileDataResponse
 }
 
+// NewPooledFileDataHashesPacket67 represents a fileData announcement packet on eth/67.
+type NewPooledFileDataHashesPacket67 []common.Hash
+
+// NewPooledFileDataHashesPacket68 represents a fileData announcement packet on eth/68 and newer.
+type NewPooledFileDataHashesPacket68 struct {
+	Sizes  []uint32
+	Hashes []common.Hash
+}
+
 // PooledFileDataRLPResponse is the network packet for fileData distribution, used
 // in the cases we already have them in rlp-encoded form
 type PooledFileDataRLPResponse []rlp.RawValue
@@ -401,5 +411,14 @@ func (*ReceiptsResponse) Kind() byte   { return ReceiptsMsg }
 func (*FileDataPacket) Name() string { return "FileData" }
 func (*FileDataPacket) Kind() byte   { return FileDataMsg }
 
+func (*NewPooledFileDataHashesPacket67) Name() string { return "NewPooledFileDataHashesPacket67" }
+func (*NewPooledFileDataHashesPacket67) Kind() byte { return NewPooledFileDataHashesMsg }
+ 
+func (*NewPooledFileDataHashesPacket68) Name() string { return "NewPooledFileDataHashesPacket68" }
+func (*NewPooledFileDataHashesPacket68) Kind() byte { return NewPooledFileDataHashesMsg }
+
 func (*GetPooledFileDatasRequest) Name() string { return "GetPooledFileDatas" }
 func (*GetPooledFileDatasRequest) Kind() byte   { return PooledFileDatasMsg }
+
+func (*PooledFileDataResponse) Name() string { return "PooledFileDataResponse" }
+func (*PooledFileDataResponse) Kind() byte 	 { return PooledFileDatasMsg }

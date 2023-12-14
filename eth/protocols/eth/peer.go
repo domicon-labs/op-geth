@@ -54,6 +54,10 @@ const (
 	// before dropping older announcements.
 	maxQueuedTxAnns = 4096
 
+	// maxQueuedFdAnns is the maximum number of fileData announcements to queue up
+	// before dropping older announcements.
+	maxQueuedFdAnns = 4096
+
 	// maxQueuedBlocks is the maximum number of block propagations to queue up before
 	// dropping broadcasts. There's not much point in queueing stale blocks, so a few
 	// that might cover uncles should be enough.
@@ -96,6 +100,7 @@ type Peer struct {
 	fdpool     	FileDataPool // fileData pool used by the broadcasters for liveness checks
 	knownFds    *knownCache          // Set of fileData hashes known to be known by this peer
 	fdBroadcast chan []common.Hash   // Channel used to queue fileData propagation requests
+	fdAnnounce  chan []common.Hash // Channel used to queue fileData announcement requests
 
 	reqDispatch chan *request  // Dispatch channel to send requests and track then until fulfilment
 	reqCancel   chan *cancel   // Dispatch channel to cancel pending requests and untrack them
@@ -121,6 +126,7 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool, fdp
 		txBroadcast:     make(chan []common.Hash),
 		txAnnounce:      make(chan []common.Hash),
 		fdBroadcast:     make(chan []common.Hash),
+		fdAnnounce: 	 make(chan []common.Hash),
 		reqDispatch:     make(chan *request),
 		reqCancel:       make(chan *cancel),
 		resDispatch:     make(chan *response),
@@ -133,6 +139,7 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool, fdp
 	go peer.broadcastTransactions()
 	go peer.announceTransactions()
 	go peer.broadcastFileData()
+	go peer.announceFileDatas()
 	go peer.dispatcher()
 
 	return peer
@@ -262,6 +269,47 @@ func (p *Peer) AsyncSendFileData(hashes []common.Hash) {
 		p.knownFds.Add(hashes...)
 	case <-p.term:
 		p.Log().Debug("Dropping fileData propagation", "count", len(hashes))
+	}
+}
+
+// sendPooledFileDataHashes66 sends fileData hashes to the peer and includes
+// them in its transaction hash set for future reference.
+//
+// This method is a helper used by the async fileData announcer. Don't call it
+// directly as the queueing (memory) and transmission (bandwidth) costs should
+// not be managed directly.
+func (p *Peer) sendPooledFileDataHashes66(hashes []common.Hash) error {
+	// Mark all the fileDatas as known, but ensure we don't overflow our limits
+	p.knownFds.Add(hashes...)
+	log.Info("sendPooledFileDataHashes66---广播交易哈希","txHash",hashes[0].String())
+	return p2p.Send(p.rw, NewPooledFileDataHashesMsg, NewPooledFileDataHashesPacket67(hashes))
+}
+
+// sendPooledFileDataHashes68 sends fileData hashes (tagged with their type
+// and size) to the peer and includes them in its fileData hash set for future
+// reference.
+//
+// This method is a helper used by the async fileData announcer. Don't call it
+// directly as the queueing (memory) and fileDatamission (bandwidth) costs should
+// not be managed directly.
+func (p *Peer) sendPooledFileDataHashes68(hashes []common.Hash, sizes []uint32) error {
+	// Mark all the fileDatas as known, but ensure we don't overflow our limits
+	p.knownFds.Add(hashes...)
+	log.Info("sendPooledFileDataHashes68---广播交易哈希","txHash",hashes[0].String())
+	return p2p.Send(p.rw, NewPooledFileDataHashesMsg, NewPooledFileDataHashesPacket68{Sizes: sizes, Hashes: hashes})
+}
+
+
+// AsyncSendPooledFileDataHashes queues a list of fileDatas hashes to eventually
+// announce to a remote peer.  The number of pending sends are capped (new ones
+// will force old sends to be dropped)
+func (p *Peer) AsyncSendPooledFileDataHashes(hashes []common.Hash) {
+	select {
+	case p.fdAnnounce <- hashes:
+		// Mark all the fileDatas as known, but ensure we don't overflow our limits
+		p.knownFds.Add(hashes...)
+	case <-p.term:
+		p.Log().Debug("Dropping transaction announcement", "count", len(hashes))
 	}
 }
 
@@ -541,15 +589,13 @@ func (p *Peer) RequestTxs(hashes []common.Hash) error {
 func (p *Peer) RequestFileDatas(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of fileDatas", "count", len(hashes))
 	id := rand.Uint64()
-
+	log.Info("RequestFileDatas----","hash",hashes[0].String())
 	requestTracker.Track(p.id, p.version, GetPooledFileDatasMsg, PooledFileDatasMsg, id)
 	return p2p.Send(p.rw, GetPooledFileDatasMsg, &GetPooledFileDataPacket{
 		RequestId:                    id,
 		GetPooledFileDatasRequest: hashes,
 	})
 }
-
-
 
 
 // knownCache is a cache for known hashes.

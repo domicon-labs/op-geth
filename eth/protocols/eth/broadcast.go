@@ -128,6 +128,82 @@ func (p *Peer) broadcastFileData() {
 	}
 }
 
+// announceFileDatas is a write loop that schedules fileData broadcasts
+// to the remote peer. The goal is to have an async writer that does not lock up
+// node internals and at the same time rate limits queued data.
+func (p *Peer) announceFileDatas() {
+	var (
+		queue  []common.Hash         // Queue of hashes to announce as fileData stubs
+		done   chan struct{}         // Non-nil if background announcer is running
+		fail   = make(chan error, 1) // Channel used to receive network error
+		failed bool                  // Flag whether a send failed, discard everything onward
+	)
+	for {
+		// If there's no in-flight announce running, check if a new one is needed
+		if done == nil && len(queue) > 0 {
+			// Pile fileData hashes until we reach our allowed network limit
+			var (
+				count        int
+				sending      []common.Hash
+				sizes 		 []uint32
+				size         common.StorageSize
+			)
+			for count = 0; count < len(queue) && size < maxTxPacketSize; count++ {
+				if fd,err := p.fdpool.Get(queue[count]); fd != nil && err == nil {
+					sending = append(sending, queue[count])
+					sizes = append(sizes, uint32(fd.Size()))
+					size += common.HashLength
+				}
+			}
+			// Shift and trim queue
+			queue = queue[:copy(queue, queue[count:])]
+
+			// If there's anything available to transfer, fire up an async writer
+			if len(sending) > 0 {
+				done = make(chan struct{})
+				go func() {
+					if p.version >= ETH68 {
+						if err := p.sendPooledFileDataHashes68(sending, sizes); err != nil {
+							fail <- err
+							return
+						}
+					} else {
+						if err := p.sendPooledFileDataHashes66(sending); err != nil {
+							fail <- err
+							return
+						}
+					}
+					close(done)
+					p.Log().Trace("Sent transaction announcements", "count", len(sending))
+				}()
+			}
+		}
+		// Transfer goroutine may or may not have been started, listen for events
+		select {
+		case hashes := <-p.fdAnnounce:
+			// If the connection failed, discard all transaction events
+			if failed {
+				continue
+			}
+			// New batch of fileDatas to be broadcast, queue them (with cap)
+			queue = append(queue, hashes...)
+			if len(queue) > maxQueuedFileData {
+				// Fancy copy and resize to ensure buffer doesn't grow indefinitely
+				queue = queue[:copy(queue, queue[len(queue)-maxQueuedFdAnns:])]
+			}
+
+		case <-done:
+			done = nil
+
+		case <-fail:
+			failed = true
+
+		case <-p.term:
+			return
+		}
+	}
+}
+
 // broadcastTransactions is a write loop that schedules transaction broadcasts
 // to the remote peer. The goal is to have an async writer that does not lock up
 // node internals and at the same time rate limits queued data.

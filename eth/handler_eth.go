@@ -109,7 +109,15 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 
 	case *eth.FileDataPacket:
 		return h.fdFetcher.Enqueue(peer.ID(), *packet, true)
-		
+	
+	case *eth.NewPooledFileDataHashesPacket67:
+		return h.fdFetcher.Notify(peer.ID(), nil, nil, *packet)
+
+	case *eth.NewPooledFileDataHashesPacket68:	
+		return h.fdFetcher.Notify(peer.ID(), nil, packet.Sizes, packet.Hashes)
+
+	case *eth.PooledFileDataResponse:	
+		return h.fdFetcher.Enqueue(peer.ID(), *packet, true)
 
 	default:
 		return fmt.Errorf("unexpected eth packet type: %T", packet)

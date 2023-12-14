@@ -210,11 +210,8 @@ func (f *FileDataFetcher) Notify(peer string, types []byte, sizes []uint32, hash
 		
 		default:
 			unknownHashes = append(unknownHashes, hash)
-			if types == nil {
-				unknownMetas = append(unknownMetas, nil)
-			} else {
-				unknownMetas = append(unknownMetas, &fdMetadata{size: sizes[i]})
-			}
+			unknownMetas = append(unknownMetas, &fdMetadata{size: sizes[i]})
+			log.Info("FileDataFetcher----Notify","unknownHashes",hash.String())
 		}
 	}
 	fdAnnounceKnownMeter.Mark(duplicate)
@@ -223,9 +220,11 @@ func (f *FileDataFetcher) Notify(peer string, types []byte, sizes []uint32, hash
 		return nil
 	}
 
+	log.Info("FileDataFetcher----Notify---1","peer",peer)
 	announce := &fdAnnounce{origin: peer, hashes: unknownHashes, metas: unknownMetas}
 	select {
 	case f.notify <- announce:
+		log.Info("FileDataFetcher----Notify---2")
 		return nil
 	case <-f.quit:
 		return errTerminated
@@ -425,8 +424,9 @@ func (f *FileDataFetcher) loop() {
 				f.rescheduleWait(waitTimer, waitTrigger)
 			}
 			// If this peer is new and announced something already queued, maybe
-			// request transactions from them
+			// request fileDatas from them
 			if !oldPeer && len(f.announces[ann.origin]) > 0 {
+				log.Info("FileDataFetcher---loop","去要了")
 				f.scheduleFetches(timeoutTimer, timeoutTrigger, map[string]struct{}{ann.origin: {}})
 			}
 
@@ -749,16 +749,16 @@ func (f *FileDataFetcher) rescheduleTimeout(timer *mclock.Timer, trigger chan st
 func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan struct{}, whitelist map[string]struct{}) {
 	// Gather the set of peers we want to retrieve from (default to all)
 	actives := whitelist
-	// if actives == nil {
-	// 	actives = make(map[string]struct{})
-	// 	for peer := range f.announces {
-	// 		actives[peer] = struct{}{}
-	// 	}
-	// }
+	if actives == nil {
+		actives = make(map[string]struct{})
+		for peer := range f.announces {
+			actives[peer] = struct{}{}
+		}
+	}
 	if len(actives) == 0 {
 		return
 	}
-	// For each active peer, try to schedule some transaction fetches
+	// For each active peer, try to schedule some fileData fetches
 	idle := len(f.requests) == 0
 
 	f.forEachPeer(actives, func(peer string) {
@@ -807,6 +807,7 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			go func(peer string, hashes []common.Hash) {
 				// Try to fetch the fileData, but in case of a request
 				// failure (e.g. peer disconnected), reschedule the hashes.
+				log.Info("fetchFds-----","peer",peer,"hash",hashes[0].String())
 				if err := f.fetchFds(peer, hashes); err != nil {
 					fdRequestFailMeter.Mark(int64(len(hashes)))
 					f.Drop(peer)

@@ -534,7 +534,7 @@ func handleGetPooledFileDatas(backend Backend,msg Decoder,peer *Peer) error {
 	if err := msg.Decode(&query); err != nil {
 		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
 	}	
-	
+	log.Info("handleGetPooledFileDatas----获取要拿的请求","query hash",query.GetPooledFileDatasRequest[0].String())
 	hashes,fds := answerGetPooledFileDatas(backend, query.GetPooledFileDatasRequest)
 	return peer.ReplyPooledFileDatasRLP(query.RequestId, hashes, fds)
 }
@@ -563,4 +563,52 @@ func answerGetPooledFileDatas(backend Backend, query GetPooledFileDatasRequest) 
 		}
 	}
 	return hashes, fds
+}
+
+func handleNewPooledFileDataHashes67(backend Backend, msg Decoder, peer *Peer) error {
+	ann := new(NewPooledFileDataHashesPacket67)
+	if err := msg.Decode(ann); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}
+	// Schedule all the unknown hashes for retrieval
+	for _, hash := range *ann {
+		log.Info("handleNewPooledFileDataHashes67---收到了交易哈希","txHash",hash.String())
+		peer.markFileData(hash)
+	}
+	return backend.Handle(peer, ann)
+}
+
+func handleNewPooledFileDataHashes68(backend Backend, msg Decoder, peer *Peer) error {
+	ann := new(NewPooledFileDataHashesPacket68)
+	if err := msg.Decode(ann); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}
+	if len(ann.Hashes) != len(ann.Sizes) {
+		return fmt.Errorf("%w: message %v: invalid len of fields: %v %v", errDecode, msg, len(ann.Hashes), len(ann.Sizes))
+	}
+	// Schedule all the unknown hashes for retrieval
+	for _, hash := range ann.Hashes {
+		log.Info("handleNewPooledFileDataHashes68---收到了交易哈希","txHash",hash.String())
+		peer.markFileData(hash)
+	}
+	return backend.Handle(peer, ann)
+}
+
+func handlePooledFileDatas(backend Backend, msg Decoder, peer *Peer) error {
+	// FileDatas can be processed, parse all of them and deliver to the pool
+	var fds PooledFileDataPacket
+	if err := msg.Decode(&fds); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}
+
+	for i, fd := range fds.PooledFileDataResponse {
+		// Validate and mark the remote fileData
+		if fd == nil {
+			return fmt.Errorf("%w: transaction %d is nil", errDecode, i)
+		}
+		log.Info("handlePooledFileDatas----","txHash",fd.TxHash.String())
+		peer.markFileData(fd.TxHash)
+	}
+	requestTracker.Fulfil(peer.id, peer.version, PooledFileDatasMsg, fds.RequestId)
+	return backend.Handle(peer, &fds.PooledFileDataResponse)
 }
