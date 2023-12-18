@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
@@ -57,7 +56,6 @@ func (h *ethHandler) TxPool() eth.TxPool {
 
 // RunPeer is invoked when a peer joins on the `eth` protocol.
 func (h *ethHandler) RunPeer(peer *eth.Peer, hand eth.Handler) error {
-	log.Info("RunPeer---","peer enode",peer.Info().Enode,"peer id",peer.ID())
 	return (*handler)(h).runEthPeer(peer, hand)
 }
 

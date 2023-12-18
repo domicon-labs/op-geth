@@ -24,7 +24,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/forkid"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/p2p"
 )
@@ -44,7 +43,6 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 	var status StatusPacket // safe to read after two values have been received from errc
 
 	go func() {
-		log.Info("Handshake----","send statsmsg peer",p.Info().Enode,"peer id",p.ID())
 		errc <- p2p.Send(p.rw, StatusMsg, &StatusPacket{
 			ProtocolVersion: uint32(p.version),
 			NetworkID:       network,
@@ -63,12 +61,10 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 		select {
 		case err := <-errc:
 			if err != nil {
-				log.Info("Handshake----","err",err.Error(),"peer info",p.Info().Enode,"peer id",p.ID())
 				markError(p, err)
 				return err
 			}
 		case <-timeout.C:
-			log.Info("Handshake----","DiscReadTimeout err info",p2p.DiscReadTimeout,)
 			markError(p, p2p.DiscReadTimeout)
 			return p2p.DiscReadTimeout
 		}
