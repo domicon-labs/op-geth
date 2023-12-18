@@ -25,12 +25,24 @@ var (
 
 var (
 	evictionInterval = time.Minute // Time interval to check for evictable FileData
-
 )
 
 var (
 	knownFdMeter       = metrics.NewRegisteredMeter("fileData/known", nil)
 	invalidFdMeter     = metrics.NewRegisteredMeter("fileData/invalid", nil)
+)
+
+var (
+	HashListKey = []byte("HashListKey")  //disk hash and disk time 
+
+)
+
+type DISK_FILEDATA_STATE int
+
+const (
+	DISK_FILEDATA_STATE_DEL    DISK_FILEDATA_STATE = iota
+	DISK_FILEDATA_STATE_SAVE   
+	DISK_FILEDATA_STATE_UNKNOW  
 )
 
 type Config struct {
@@ -43,6 +55,8 @@ type Config struct {
 	JournalRemote bool
 	Lifetime      time.Duration
 }
+
+
 
 var DefaultConfig = Config{
 	Journal:  "fileData.rlp",
@@ -65,6 +79,14 @@ type BlockChain interface {
 	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
+type diskDetail struct {
+	TxHash        common.Hash
+	State         DISK_FILEDATA_STATE
+	TimeRecord    time.Time
+	Data          *types.FileData
+}
+
+
 type FilePool struct {
 	config          Config
 	chainconfig     *params.ChainConfig
@@ -77,10 +99,9 @@ type FilePool struct {
 	journal         *journal                // Journal of local fileData to back up to disk
 	subs            event.SubscriptionScope // Subscription scope to unsubscribe all on shutdown
 	all             *lookup
+	diskCache		map[common.Hash]*diskDetail 
 	collector       map[common.Hash]*types.FileData
 	beats           map[common.Hash]time.Time // Last heartbeat from each known account
-	//diskSaveCh      chan []common.Hash  // move fileData from memory pool to disk 
-	//reqResetCh      chan *fppoolResetRequest
 	reorgDoneCh     chan chan struct{}
 	reorgShutdownCh chan struct{}  // requests shutdown of scheduleReorgLoop
 	wg              sync.WaitGroup // tracks loop, scheduleReorgLoop
@@ -94,10 +115,9 @@ func New(config Config, chain BlockChain) *FilePool {
 		chainconfig:     chain.Config(),
 		signer:          types.LatestSigner(chain.Config()),
 		all:             newLookup(),
+		diskCache:		 make(map[common.Hash]*diskDetail),
 		collector:       make(map[common.Hash]*types.FileData),
 		beats:           make(map[common.Hash]time.Time),
-		//reqResetCh:      make(chan *fppoolResetRequest),
-		//diskSaveCh:      make(chan []common.Hash),
 		reorgDoneCh:     make(chan chan struct{}),
 		reorgShutdownCh: make(chan struct{}),
 		initDoneCh:      make(chan struct{}),
@@ -110,12 +130,6 @@ func New(config Config, chain BlockChain) *FilePool {
 	fp.Init(chain.CurrentBlock())
 	return fp
 }
-
-
-// func (fp *FilePool) ReceiptCh() chan []*types.Receipt{
-// 	return fp.diskSaveCh
-// }
-
 
 func (fp *FilePool) Init(head *types.Header) error {
 	// Initialize the state with head block, or fallback to empty one in
@@ -161,6 +175,7 @@ func (fp *FilePool) loop() {
 		// Start the stats reporting and fileData eviction tickers
 		evict   = time.NewTicker(evictionInterval)
 		journal = time.NewTicker(fp.config.Rejournal)
+		remove  = time.NewTicker(fp.config.Lifetime)
 	)
 	defer evict.Stop()
 	defer journal.Stop()
@@ -173,18 +188,31 @@ func (fp *FilePool) loop() {
 		case <-fp.reorgShutdownCh:
 			return
 
-		// // new transaction is writed on chain
-		// case receipts := <-fp.diskSaveCh:
+		// remove FileData from disk
+		case <- remove.C:
+		 diskDb := fp.currentState.Database().DiskDB()
+		 data,err := diskDb.Get(HashListKey)
+		 if err != nil || len(data) == 0 {
+			continue
+		 }
 
-		// 	fp.mu.Lock()
-		// 	for _,receipt := range receipts {
-		// 		txHash := receipt.TxHash
-		// 		err := fp.saveFileDataToDisk(txHash)
-		// 		if err == nil {
-		// 			fp.removeFileData(txHash)
-		// 		}
-		// 	}			
-		// 	fp.mu.Unlock()
+		var cache map[common.Hash]*diskDetail
+		err = rlp.DecodeBytes(data,&cache)
+		if err != nil {
+			continue
+		}
+
+		for txHash,disk := range cache {
+			if disk.TimeRecord.Before(time.Now().Add(3*24*time.Hour)) {
+				disk.State = DISK_FILEDATA_STATE_DEL
+			}
+			cache[txHash] = disk
+		}
+
+		newData,err := rlp.EncodeToBytes(cache)
+		if err == nil {
+			diskDb.Put(HashListKey,newData)	
+		}
 
 		// Handle inactive txHash fileData eviction
 		case <-evict.C:
@@ -193,6 +221,7 @@ func (fp *FilePool) loop() {
 				// Any non-locals old enough should be removed
 				if time.Since(fp.beats[txHash]) > fp.config.Lifetime {
 					for txHash := range fp.collector {
+						delete(fp.diskCache,txHash)
 						fp.removeFileData(txHash)
 					}
 				}
@@ -399,11 +428,13 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 
 	diskDb := fp.currentState.Database().DiskDB()
 
-	data, err := rlp.EncodeToBytes(fileData)
+	fp.diskCache[hash] = &diskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: fileData}
+
+	data, err := rlp.EncodeToBytes(diskDb)
 	if err != nil {
 		return err
 	}
-	diskDb.Put(hash[:], data)
+	diskDb.Put(HashListKey, data)
 	fp.removeFileData(hash)
 	return nil
 }
@@ -432,17 +463,21 @@ func (fp *FilePool) Get(hash common.Hash) (*types.FileData,error){
 	fd := fp.get(hash)
 	if fd == nil {
 		diskDb := fp.currentState.Database().DiskDB()
-		data,err := diskDb.Get(hash[:])
+		data,err := diskDb.Get(HashListKey)
 		if err != nil {
 			return nil,err
 		}
 		if len(data) > 0 {
-			var fileData types.FileData
-			err = rlp.DecodeBytes(data,&fileData) 
+			var cache map[common.Hash]*diskDetail
+			err = rlp.DecodeBytes(data,&cache) 
 			if err != nil {
 				return nil,err
 			}
-			return &fileData,nil
+			val := cache[hash]
+			if val.State == DISK_FILEDATA_STATE_DEL {
+				return nil,errors.New("fileData already del")
+			}
+			return val.Data,nil
 		}else {
 			return nil,err
 		}	
