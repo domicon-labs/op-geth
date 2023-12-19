@@ -138,8 +138,8 @@ type FileDataFetcher struct {
 	// fulfilled and some rescheduled. Note, this step shares 'announces' from the
 	// previous stage to avoid having to duplicate (need it for DoS checks).
 	fetching   map[common.Hash]string              // Transaction set currently being retrieved
-	requests   map[string]*fdRequest               // In-flight transaction retrievals
-	alternates map[common.Hash]map[string]struct{} // In-flight transaction alternate origins if retrieval fails
+	requests   map[string]*fdRequest               // In-flight fileData retrievals
+	alternates map[common.Hash]map[string]struct{} // In-flight fileData alternate origins if retrieval fails
 
 	// Callbacks
 	hasFd    func(common.Hash) bool             // Retrieves a fd from the local fdpool
@@ -291,16 +291,13 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 			log.Warn("Peer delivering stale transactions", "peer", peer, "rejected", otherreject)
 		}
 	}
-	if !direct {
-		select {
+	
+	select {
 		case f.cleanup <- &fdDelivery{origin: peer, hashes: added, metas: metas , direct: direct}:
 			return nil
 		case <-f.quit:
 			return errTerminated
-		}
 	}
-
-	return nil
 }
 
 // Drop should be called when a peer disconnects. It cleans up all the internal
@@ -758,13 +755,14 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 	if len(actives) == 0 {
 		return
 	}
-	log.Info("scheduleFetches----2")
+	log.Info("scheduleFetches----2","len(f.requests",len(f.requests))
 
 	// For each active peer, try to schedule some fileData fetches
 	idle := len(f.requests) == 0
 
 	f.forEachPeer(actives, func(peer string) {
 		if f.requests[peer] != nil {
+			log.Info("forEachPeer----","f.requests[peer]",f.requests[peer])
 			return // continue in the for-each
 		}
 		if len(f.announces[peer]) == 0 {
