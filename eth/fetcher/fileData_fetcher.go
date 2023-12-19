@@ -751,18 +751,15 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			actives[peer] = struct{}{}
 		}
 	}
-	log.Info("scheduleFetches----1","len(actives)",len(actives))
 	if len(actives) == 0 {
 		return
 	}
-	log.Info("scheduleFetches----2","len(f.requests",len(f.requests))
 
 	// For each active peer, try to schedule some fileData fetches
 	idle := len(f.requests) == 0
 
 	f.forEachPeer(actives, func(peer string) {
 		if f.requests[peer] != nil {
-			log.Info("forEachPeer----","f.requests[peer]",f.requests[peer])
 			return // continue in the for-each
 		}
 		if len(f.announces[peer]) == 0 {
@@ -772,8 +769,6 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			hashes = make([]common.Hash, 0, maxFdRetrievals)
 		    bytes  uint64
 		)
-
-		log.Info("scheduleFetches----3")
 		f.forEachAnnounce(f.announces[peer], func(hash common.Hash, meta *fdMetadata) bool {
 			// If the fileData is already fetching, skip to the next one
 			if _, ok := f.fetching[hash]; ok {
@@ -801,7 +796,6 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			}
 			return true // scheduled, try to add more
 		})
-		log.Info("scheduleFetches----4")
 
 		// If any hashes were allocated, request them from the peer
 		if len(hashes) > 0 {
