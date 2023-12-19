@@ -447,6 +447,8 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	if err != nil {
 		return err
 	}
+
+	log.Info("SaveFileDataToDisk----","txHash",hash.String())
 	diskDb.Put(HashListKey, data)
 	fp.removeFileData(hash)
 	return nil

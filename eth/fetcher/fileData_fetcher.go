@@ -775,6 +775,7 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 		    bytes  uint64
 		)
 
+		log.Info("scheduleFetches----3")
 		f.forEachAnnounce(f.announces[peer], func(hash common.Hash, meta *fdMetadata) bool {
 			// If the fileData is already fetching, skip to the next one
 			if _, ok := f.fetching[hash]; ok {
@@ -802,7 +803,7 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			}
 			return true // scheduled, try to add more
 		})
-		log.Info("scheduleFetches----3")
+		log.Info("scheduleFetches----4")
 
 		// If any hashes were allocated, request them from the peer
 		if len(hashes) > 0 {
