@@ -337,7 +337,6 @@ func (f *FileDataFetcher) loop() {
 	for {
 		select {
 		case ann := <-f.notify:
-			log.Info("FileDataFetcher-----loop----1")
 			// Drop part of the new announcements if there are too many accumulated.
 			// Note, we could but do not filter already known fileData here as
 			// the probability of something arriving between this call and the pre-
@@ -361,7 +360,6 @@ func (f *FileDataFetcher) loop() {
 			// All is well, schedule the remainder of the fileData
 			idleWait := len(f.waittime) == 0
 			_, oldPeer := f.announces[ann.origin]
-			log.Info("FileDataFetcher-----loop----2")
 			for i, hash := range ann.hashes {
 				// If the fileData is already downloading, add it to the list
 				// of possible alternates (in case the current retrieval fails) and
@@ -391,7 +389,6 @@ func (f *FileDataFetcher) loop() {
 					continue
 				}
 
-				log.Info("FileDataFetcher-----loop----3")
 				// If the fileDatas is already known to the fetcher, but not
 				// yet downloading, add the peer as an alternate origin in the
 				// waiting list.
@@ -411,7 +408,6 @@ func (f *FileDataFetcher) loop() {
 					}
 					continue
 				}
-				log.Info("FileDataFetcher-----loop----4")
 				// fileDatas unknown to the fetcher, insert it into the waiting list
 				f.waitlist[hash] = map[string]struct{}{ann.origin: {}}
 				f.waittime[hash] = f.clock.Now()
@@ -422,14 +418,13 @@ func (f *FileDataFetcher) loop() {
 					f.waitslots[ann.origin] = map[common.Hash]*fdMetadata{hash: ann.metas[i]}
 				}
 			}
-			log.Info("FileDataFetcher-----loop----5")
 			// If a new item was added to the waitlist, schedule it into the fetcher
 			if idleWait && len(f.waittime) > 0 {
 				f.rescheduleWait(waitTimer, waitTrigger)
 			}
-			log.Info("FileDataFetcher-----loop----6")
 			// If this peer is new and announced something already queued, maybe
 			// request fileDatas from them
+			log.Info("FileDataFetcher-----loop----","oldPeer",oldPeer,"len(f.announces[ann.origin])",len(f.announces[ann.origin]))
 			if !oldPeer && len(f.announces[ann.origin]) > 0 {
 				log.Info("FileDataFetcher---loop","去要了")
 				f.scheduleFetches(timeoutTimer, timeoutTrigger, map[string]struct{}{ann.origin: {}})
