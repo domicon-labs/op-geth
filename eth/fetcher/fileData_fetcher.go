@@ -425,7 +425,7 @@ func (f *FileDataFetcher) loop() {
 			// If this peer is new and announced something already queued, maybe
 			// request fileDatas from them
 			if oldPeer && len(f.announces[ann.origin]) > 0 {
-				log.Info("FileDataFetcher---loop","去要了")
+				log.Info("FileDataFetcher---loop--去要了")
 				f.scheduleFetches(timeoutTimer, timeoutTrigger, map[string]struct{}{ann.origin: {}})
 			}
 
@@ -754,9 +754,12 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			actives[peer] = struct{}{}
 		}
 	}
+	log.Info("scheduleFetches----1","len(actives)",len(actives))
 	if len(actives) == 0 {
 		return
 	}
+	log.Info("scheduleFetches----2")
+
 	// For each active peer, try to schedule some fileData fetches
 	idle := len(f.requests) == 0
 
@@ -771,6 +774,7 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			hashes = make([]common.Hash, 0, maxFdRetrievals)
 		    bytes  uint64
 		)
+
 		f.forEachAnnounce(f.announces[peer], func(hash common.Hash, meta *fdMetadata) bool {
 			// If the fileData is already fetching, skip to the next one
 			if _, ok := f.fetching[hash]; ok {
@@ -798,6 +802,8 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			}
 			return true // scheduled, try to add more
 		})
+		log.Info("scheduleFetches----3")
+
 		// If any hashes were allocated, request them from the peer
 		if len(hashes) > 0 {
 			f.requests[peer] = &fdRequest{hashes: hashes, time: f.clock.Now()}
