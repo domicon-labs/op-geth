@@ -424,8 +424,7 @@ func (f *FileDataFetcher) loop() {
 			}
 			// If this peer is new and announced something already queued, maybe
 			// request fileDatas from them
-			log.Info("FileDataFetcher-----loop----","oldPeer",oldPeer,"len(f.announces[ann.origin])",len(f.announces[ann.origin]))
-			if !oldPeer && len(f.announces[ann.origin]) > 0 {
+			if oldPeer && len(f.announces[ann.origin]) > 0 {
 				log.Info("FileDataFetcher---loop","去要了")
 				f.scheduleFetches(timeoutTimer, timeoutTrigger, map[string]struct{}{ann.origin: {}})
 			}
