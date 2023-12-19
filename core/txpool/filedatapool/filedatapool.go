@@ -1,6 +1,7 @@
 package filedatapool
 
 import (
+	"encoding/json"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -14,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (
@@ -80,12 +80,21 @@ type BlockChain interface {
 }
 
 type diskDetail struct {
-	TxHash        common.Hash
-	State         DISK_FILEDATA_STATE
-	TimeRecord    time.Time
-	Data          *types.FileData
+	TxHash        common.Hash 			`json:"TxHash"`
+	State         DISK_FILEDATA_STATE	`json:"State"`
+	TimeRecord    time.Time				`json:"TimeRecord"`
+	Data          types.FileData		`json:"Data"`
 }
 
+type DiskCache struct {
+   Cache  map[common.Hash]diskDetail   `json:"Cache"`
+}
+
+func NewDiskCache() *DiskCache{
+	return &DiskCache{
+		Cache: make(map[common.Hash]diskDetail),
+	}
+}
 
 type FilePool struct {
 	config          Config
@@ -99,7 +108,7 @@ type FilePool struct {
 	journal         *journal                // Journal of local fileData to back up to disk
 	subs            event.SubscriptionScope // Subscription scope to unsubscribe all on shutdown
 	all             *lookup
-	diskCache		map[common.Hash]*diskDetail 
+	diskCache		map[common.Hash]diskDetail 
 	collector       map[common.Hash]*types.FileData
 	beats           map[common.Hash]time.Time // Last heartbeat from each known account
 	reorgDoneCh     chan chan struct{}
@@ -115,7 +124,7 @@ func New(config Config, chain BlockChain) *FilePool {
 		chainconfig:     chain.Config(),
 		signer:          types.LatestSigner(chain.Config()),
 		all:             newLookup(),
-		diskCache:		 make(map[common.Hash]*diskDetail),
+		diskCache:		 make(map[common.Hash]diskDetail),
 		collector:       make(map[common.Hash]*types.FileData),
 		beats:           make(map[common.Hash]time.Time),
 		reorgDoneCh:     make(chan chan struct{}),
@@ -196,20 +205,19 @@ func (fp *FilePool) loop() {
 			continue
 		 }
 
-		var cache map[common.Hash]*diskDetail
-		err = rlp.DecodeBytes(data,&cache)
+		var cache DiskCache
+		err = json.Unmarshal(data,&cache)
 		if err != nil {
 			continue
 		}
-
-		for txHash,disk := range cache {
+		for txHash,disk := range cache.Cache {
 			if disk.TimeRecord.Before(time.Now().Add(3*24*time.Hour)) {
 				disk.State = DISK_FILEDATA_STATE_DEL
 			}
-			cache[txHash] = disk
+			cache.Cache[txHash] = disk
 		}
 
-		newData,err := rlp.EncodeToBytes(cache)
+		newData,err := json.Marshal(cache)
 		if err == nil {
 			diskDb.Put(HashListKey,newData)	
 		}
@@ -428,9 +436,14 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 
 	diskDb := fp.currentState.Database().DiskDB()
 
-	fp.diskCache[hash] = &diskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: fileData}
+	fp.diskCache[hash] = diskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
 
-	data, err := rlp.EncodeToBytes(diskDb)
+	cache := NewDiskCache()
+	for hash,info := range fp.diskCache{
+		cache.Cache[hash]= info
+	}
+
+	data, err := json.Marshal(cache)
 	if err != nil {
 		return err
 	}
@@ -468,16 +481,16 @@ func (fp *FilePool) Get(hash common.Hash) (*types.FileData,error){
 			return nil,err
 		}
 		if len(data) > 0 {
-			var cache map[common.Hash]*diskDetail
-			err = rlp.DecodeBytes(data,&cache) 
+			var cache DiskCache
+			err = json.Unmarshal(data,&cache)
 			if err != nil {
 				return nil,err
 			}
-			val := cache[hash]
+			val := cache.Cache[hash]
 			if val.State == DISK_FILEDATA_STATE_DEL {
 				return nil,errors.New("fileData already del")
 			}
-			return val.Data,nil
+			return &val.Data,nil
 		}else {
 			return nil,err
 		}	
