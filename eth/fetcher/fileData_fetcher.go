@@ -218,12 +218,9 @@ func (f *FileDataFetcher) Notify(peer string, types []byte, sizes []uint32, hash
 	if len(unknownHashes) == 0 {
 		return nil
 	}
-
-	log.Info("FileDataFetcher----Notify---1","peer",peer)
 	announce := &fdAnnounce{origin: peer, hashes: unknownHashes, metas: unknownMetas}
 	select {
 	case f.notify <- announce:
-		log.Info("FileDataFetcher----Notify---2")
 		return nil
 	case <-f.quit:
 		return errTerminated

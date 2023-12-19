@@ -52,7 +52,7 @@ func (journal *journal) load(add func([]*types.FileData) []error) error {
 	journal.writer = new(devNull)
 	defer func() { journal.writer = nil }()
 
-	// Inject all transactions from the journal into the pool
+	// Inject all fileDatas from the journal into the pool
 	stream := rlp.NewStream(input, 0)
 	total, dropped := 0, 0
 
@@ -62,7 +62,7 @@ func (journal *journal) load(add func([]*types.FileData) []error) error {
 	loadBatch := func(files types.FileDatas) {
 		for _, err := range add(files) {
 			if err != nil {
-				log.Debug("Failed to add journaled transaction", "err", err)
+				log.Debug("Failed to add journaled fileData", "err", err)
 				dropped++
 			}
 		}
@@ -141,7 +141,7 @@ func (journal *journal) rotate(all map[common.Hash]*types.FileData) error {
 		return err
 	}
 	journal.writer = sink
-	log.Info("Regenerated local transaction journal", "transactions", journaled, "accounts", len(all))
+	log.Info("Regenerated local fileData journal", "fileDatas", journaled, "accounts", len(all))
 
 	return nil
 }

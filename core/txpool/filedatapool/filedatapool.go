@@ -50,8 +50,8 @@ type Config struct {
 	Locals    []common.Address // Addresses that should be treated by default as local
 
 	Rejournal time.Duration    // Time interval to regenerate the local fileData journal
-	// JournalRemote controls whether journaling includes remote transactions or not.
-	// When true, all transactions loaded from the journal are treated as remote.
+	// JournalRemote controls whether journaling includes remote fileData or not.
+	// When true, all fileDatas loaded from the journal are treated as remote.
 	JournalRemote bool
 	Lifetime      time.Duration
 }
@@ -62,6 +62,7 @@ var DefaultConfig = Config{
 	Journal:  "fileData.rlp",
 	Lifetime: 3 * 24 * time.Hour,
 	Rejournal: time.Hour,
+	JournalRemote: true,
 }
 
 type BlockChain interface {
