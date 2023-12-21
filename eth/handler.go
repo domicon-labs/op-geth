@@ -662,21 +662,26 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 		annos = make(map[*ethPeer][]common.Hash) // Set peer->hash to announce
 	)
 
-	//numDirect := 1
 	for _,fd := range fds {
 		log.Info("BroadcastFileData---","需要广播的fileData",fd.TxHash.String())
 		peers := h.peers.peerWithOutFileData(fd.TxHash)
+		numDirect := len(peers)/2
+		if numDirect == 0 {
+			numDirect = 1
+		}
+
 		// TODO dont do broadcast fileData directly 
 		// Send the fileData unconditionally to a subset of our peers
-		// for _, peer := range peers[:numDirect] {
-		// 	fdset[peer] = append(fdset[peer], fd.TxHash)
-		// }
-
+		for _, peer := range peers[:numDirect] {
+			fdset[peer] = append(fdset[peer], fd.TxHash)
+		}
+		log.Info("全量广播----","length",len(peers[:numDirect]))
 		// For the remaining peers, send announcement only
-		//for _, peer := range peers[numDirect:] {
-			for _, peer := range peers {	
+		for _, peer := range peers[numDirect:] {
+			//for _, peer := range peers {	
 			annos[peer] = append(annos[peer], fd.TxHash)
 		}
+		log.Info("广播hash----","length",len(peers[numDirect:]))
 	}
 
 	for peer, hashes := range fdset {

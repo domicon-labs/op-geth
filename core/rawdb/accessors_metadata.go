@@ -190,3 +190,15 @@ func WriteTransitionStatus(db ethdb.KeyValueWriter, data []byte) {
 		log.Crit("Failed to store the eth2 transition status", "err", err)
 	}
 }
+
+
+func WriteFileDataDetail(db ethdb.KeyValueWriter,data []byte,txHash common.Hash) {
+	if err := db.Put(fdLookupKey(txHash),data); err != nil {
+		log.Error("Failed to store the fileData ")
+	}
+}
+
+func ReadFileDataDetail(db ethdb.KeyValueReader,txHash common.Hash) ([]byte,error) {
+	data,err := db.Get(fdLookupKey(txHash))
+	return data,err
+}

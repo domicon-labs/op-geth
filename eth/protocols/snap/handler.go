@@ -153,8 +153,6 @@ func HandleMessage(backend Backend, peer *Peer) error {
 		}(start)
 	}
 
-	log.Info("HandleMessage----","msg.Code",msg.Code)
-
 	// Handle the message depending on its contents
 	switch {
 	case msg.Code == GetAccountRangeMsg:
