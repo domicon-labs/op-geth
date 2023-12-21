@@ -666,10 +666,6 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 		log.Info("BroadcastFileData---","需要广播的fileData",fd.TxHash.String())
 		peers := h.peers.peerWithOutFileData(fd.TxHash)
 		numDirect := len(peers)/2
-		if numDirect == 0 {
-			numDirect = 1
-		}
-
 		// TODO dont do broadcast fileData directly 
 		// Send the fileData unconditionally to a subset of our peers
 		for _, peer := range peers[:numDirect] {
