@@ -215,14 +215,14 @@ func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 	return head, err
 }
 
-type rpcFileData struct {
+type RPCFileData struct {
 	Sender         common.Address   `json:"sender"`
-	Submmiter      common.Address	`json:"submmiter"`
-	Length         hexutil.Uint64	`json:"length"`
-	Index          hexutil.Uint64	`json:"index"`
+	Submmiter      common.Address		`json:"submmiter"`
+	Length         hexutil.Uint64		`json:"length"`
+	Index          hexutil.Uint64		`json:"index"`
 	Commitment     hexutil.Bytes    `json:"commitment"`	
-	Data           hexutil.Bytes	`json:"data"`
-	Sign  		   hexutil.Bytes	`json:"sign"`
+	Data           hexutil.Bytes		`json:"data"`
+	Sign  		   hexutil.Bytes			`json:"sign"`
 	TxHash         common.Hash      `json:"txhash"`
 }
 
@@ -309,8 +309,8 @@ func (ec *Client) UploadFileDataByParams(ctx context.Context,sender common.Addre
 	return tmpErr
 }
 
-func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (rpcFileData,error){
-	var fd rpcFileData
+func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFileData,error){
+	var fd RPCFileData
 	err := ec.c.CallContext(ctx,&fd,"eth_getFileDataByHash",hash)
 	return fd,err
 }
