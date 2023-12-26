@@ -48,16 +48,21 @@ type LesApiBackend struct {
 	gpo                 *gasprice.Oracle
 }
 
+// ChangeCurrentState implements ethapi.Backend.
+func (*LesApiBackend) ChangeCurrentState(state int, numberOrHash rpc.BlockNumberOrHash) bool {
+	panic("unimplemented")
+}
+
 // DiskSaveFileDataWithHash implements ethapi.Backend.
 func (*LesApiBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
 	panic("unimplemented")
 }
 
-func (*LesApiBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
+func (*LesApiBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	panic("unimplemented")
 }
 
-func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,error) {
+func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
 	panic("unimplemented")
 }
 

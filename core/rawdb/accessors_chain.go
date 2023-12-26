@@ -162,6 +162,17 @@ func WriteHeaderNumber(db ethdb.KeyValueWriter, hash common.Hash, number uint64)
 	}
 }
 
+// WriteBlockStateByNumber store the hash -> state 
+func WriteBlockStateByNumber(db ethdb.KeyValueWriter,hash common.Hash,state int) error {
+	key := headerNumberStateKey(hash)
+	data := encodeBlockNumber(uint64(state))
+	if err := db.Put(key, data); err != nil {
+		return err
+		log.Crit("Failed to store hash to number mapping", "err", err)
+	}
+	return nil
+}
+
 // DeleteHeaderNumber removes hash->number mapping.
 func DeleteHeaderNumber(db ethdb.KeyValueWriter, hash common.Hash) {
 	if err := db.Delete(headerNumberKey(hash)); err != nil {

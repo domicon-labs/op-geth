@@ -152,6 +152,14 @@ func encodeBlockNumber(number uint64) []byte {
 	return enc
 }
 
+// encodeBlockState encodes a block state as big endian uint64 
+func encodeBlockState(state uint64) []byte {
+	enc := make([]byte, 8)
+	binary.BigEndian.PutUint64(enc, state)
+	return enc
+}
+
+
 // headerKeyPrefix = headerPrefix + num (uint64 big endian)
 func headerKeyPrefix(number uint64) []byte {
 	return append(headerPrefix, encodeBlockNumber(number)...)
@@ -175,6 +183,12 @@ func headerHashKey(number uint64) []byte {
 // headerNumberKey = headerNumberPrefix + hash
 func headerNumberKey(hash common.Hash) []byte {
 	return append(headerNumberPrefix, hash.Bytes()...)
+}
+
+// headerStatekey = headerNumberPrefix + hash + "state"
+func headerNumberStateKey(hash common.Hash) []byte {
+	res := append(headerNumberPrefix,hash.Bytes()...)
+	return append(res,[]byte("state")...)
 }
 
 // blockBodyKey = blockBodyPrefix + num (uint64 big endian) + hash

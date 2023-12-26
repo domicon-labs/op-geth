@@ -55,6 +55,11 @@ type EthAPIBackend struct {
 	gpo                 *gasprice.Oracle
 }
 
+// ChangeCurrentState implements ethapi.Backend.
+func (*EthAPIBackend) ChangeCurrentState(state int,numberOrHash rpc.BlockNumberOrHash) bool{
+	panic("unimplemented")
+}
+
 // ChainConfig returns the active chain configuration.
 func (b *EthAPIBackend) ChainConfig() *params.ChainConfig {
 	return b.eth.blockchain.Config()
@@ -316,32 +321,32 @@ func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address,
 	//return nil
 }
 
-func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,error){
-	fd,err := b.eth.fdPool.Get(hash)
+func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
+	fd, err := b.eth.fdPool.Get(hash)
 	if fd != nil {
-		 return fd,nil
- 	}
-	return nil,err
+		return fd, nil
+	}
+	return nil, err
 }
 
-func (b *EthAPIBackend) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData,[]error){
-	fileDatas := make([]*types.FileData,len(hashes))
+func (b *EthAPIBackend) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
+	fileDatas := make([]*types.FileData, len(hashes))
 	errs := make([]error, len(hashes))
-	for inde,hash := range hashes {
-		log.Info("EthAPIBackend-----GetFileDataByHash","txHash",hash.String(),"index",inde)
-		fd,err := b.eth.fdPool.Get(hash)
-	 	if fd != nil {
+	for inde, hash := range hashes {
+		log.Info("EthAPIBackend-----GetFileDataByHash", "txHash", hash.String(), "index", inde)
+		fd, err := b.eth.fdPool.Get(hash)
+		if fd != nil {
 			fileDatas[inde] = fd
-  	}
+		}
 		errs[inde] = err
 	}
-	return fileDatas,errs
+	return fileDatas, errs
 }
 
-func (b *EthAPIBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error) {
+func (b *EthAPIBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
 	flags := make([]bool, len(hashes))
 	errs := make([]error, len(hashes))
-	for index,hash := range hashes{
+	for index, hash := range hashes {
 		err := b.eth.fdPool.SaveFileDataToDisk(hash)
 		if err != nil {
 			flags[index] = false
@@ -349,15 +354,15 @@ func (b *EthAPIBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool
 		}
 		flags[index] = true
 	}
-	return flags,errs
+	return flags, errs
 }
 
-func (b *EthAPIBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error){
+func (b *EthAPIBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	err := b.eth.fdPool.SaveFileDataToDisk(hash)
 	if err != nil {
-		return false,err
+		return false, err
 	}
-	return true,err
+	return true, err
 }
 
 func (b *EthAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
@@ -402,9 +407,9 @@ func (b *EthAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction 
 }
 
 func (b *EthAPIBackend) GetPoolFileData(hash common.Hash) *types.FileData {
-	fd,err := b.eth.fdPool.Get(hash)
+	fd, err := b.eth.fdPool.Get(hash)
 	if err != nil {
-		log.Info("GetPoolFileData---get","err",err.Error())
+		log.Info("GetPoolFileData---get", "err", err.Error())
 	}
 	return fd
 }

@@ -612,24 +612,28 @@ func (b testBackend) UploadFileDataByParams(sender common.Address, submitter com
 	return nil
 }
 
-func (b testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error){
-	return true,nil
+func (b testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
+	return true, nil
+}
+
+// ChangeCurrentState implements Backend.
+func (b testBackend) ChangeCurrentState(state int, numberOrHash rpc.BlockNumberOrHash) bool {
+	panic("unimplemented")
 }
 
 // DiskSaveFileDataWithHash implements Backend.
 func (b testBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
-	return []bool{true},[]error{}
+	return []bool{true}, []error{}
 }
 
 // GetFileDataByHash implements Backend.
 func (b testBackend) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
-	return []*types.FileData{},[]error{}
+	return []*types.FileData{}, []error{}
 }
 
-func (b testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,error) {
-	return nil,nil
+func (b testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
+	return nil, nil
 }
-
 
 func (b testBackend) SyncProgress() ethereum.SyncProgress { return ethereum.SyncProgress{} }
 func (b testBackend) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {

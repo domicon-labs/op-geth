@@ -212,6 +212,11 @@ type backendMock struct {
 	config  *params.ChainConfig
 }
 
+// ChangeCurrentState implements Backend.
+func (*backendMock) ChangeCurrentState(state int, numberOrHash rpc.BlockNumberOrHash) bool {
+	panic("unimplemented")
+}
+
 // DiskSaveFileDataWithHash implements Backend.
 func (*backendMock) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	panic("unimplemented")
@@ -232,16 +237,16 @@ func (*backendMock) UploadFileDataByParams(sender common.Address, submitter comm
 	return nil
 }
 
-func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData,error) {
-	return nil,nil
+func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
+	return nil, nil
 }
 
 func (*backendMock) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
 	return nil, nil
 }
 
-func (*backendMock) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error){
-	return nil,nil
+func (*backendMock) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
+	return nil, nil
 }
 
 func newBackendMock() *backendMock {

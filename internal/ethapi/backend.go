@@ -91,6 +91,7 @@ type Backend interface {
 	GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData,[]error)
 	DiskSaveFileDataWithHash(hash common.Hash) (bool,error)
 	DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error)
+	ChangeCurrentState(state int,numberOrHash rpc.BlockNumberOrHash) bool
 	SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription
 
 	ChainConfig() *params.ChainConfig

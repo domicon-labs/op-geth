@@ -39,6 +39,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -1929,6 +1930,16 @@ func (f *FileDataAPI) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[
 	}
 	
 	return flags,errs
+}
+
+func (f *FileDataAPI) ChangeCurrentState(state int,blockNrOrHash rpc.BlockNumberOrHash) bool {
+	db, header, err := f.b.StateAndHeaderByNumberOrHash(context.TODO(), blockNrOrHash)
+	if db == nil || err != nil || header == nil{
+		return false
+	}
+
+	err = rawdb.WriteBlockStateByNumber(db.Database().DiskDB(),header.Hash(),state)
+	return err == nil
 }
 
 // TransactionAPI exposes methods for reading and creating transaction data.

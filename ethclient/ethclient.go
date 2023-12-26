@@ -333,6 +333,11 @@ func (ec *Client) DiskSaveFileDataWithHash(ctx context.Context,hash common.Hash)
 	return flag,err
 }
 
+func (ec *Client) ChangeCurrentState(ctx context.Context,state int,blockNrOrHash rpc.BlockNumberOrHash) (bool,error) {
+	var flag bool
+	err := ec.c.CallContext(ctx,&flag,"eth_changeCurrentState",blockNrOrHash.String())
+	return flag,err
+}
 
 // TransactionInBlock returns a single transaction at index in the given block.
 func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
