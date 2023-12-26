@@ -232,8 +232,16 @@ func (*backendMock) UploadFileDataByParams(sender common.Address, submitter comm
 	return nil
 }
 
-func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
+func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData,error) {
+	return nil,nil
+}
+
+func (*backendMock) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
 	return nil, nil
+}
+
+func (*backendMock) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error){
+	return nil,nil
 }
 
 func newBackendMock() *backendMock {

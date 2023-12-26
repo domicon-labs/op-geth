@@ -109,7 +109,7 @@ type FilePool struct {
 	journal         *journal                // Journal of local fileData to back up to disk
 	subs            event.SubscriptionScope // Subscription scope to unsubscribe all on shutdown
 	all             *lookup
-	diskCache		map[common.Hash]diskDetail 
+	diskCache				map[common.Hash]diskDetail 
 	collector       map[common.Hash]*types.FileData
 	beats           map[common.Hash]time.Time // Last heartbeat from each known account
 	reorgDoneCh     chan chan struct{}

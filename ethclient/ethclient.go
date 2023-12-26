@@ -309,14 +309,26 @@ func (ec *Client) UploadFileDataByParams(ctx context.Context,sender common.Addre
 	return tmpErr
 }
 
+func (ec *Client) GetFileDataByHashes(ctx context.Context,hashes []common.Hash) ([]RPCFileData,error){
+	fds := make([]RPCFileData,len(hashes)) 
+	err := ec.c.CallContext(ctx,&fds,"eth_getFileDataByHashes",hashes)
+	return fds,err
+}
+
 func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFileData,error){
 	var fd RPCFileData
 	err := ec.c.CallContext(ctx,&fd,"eth_getFileDataByHash",hash)
 	return fd,err
 }
 
+func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context,hashes []common.Hash) ([]bool,error){
+	flags := make([]bool,len(hashes))
+	err := ec.c.CallContext(ctx,&flags,"eth_diskSaveFileDataWithHashes",hashes)	
+	return flags,err
+}
+
 func (ec *Client) DiskSaveFileDataWithHash(ctx context.Context,hash common.Hash) (bool,error){
-	var flag bool
+	var flag bool 
 	err := ec.c.CallContext(ctx,&flag,"eth_diskSaveFileDataWithHash",hash)	
 	return flag,err
 }

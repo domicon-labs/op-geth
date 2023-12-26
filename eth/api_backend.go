@@ -317,20 +317,47 @@ func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address,
 }
 
 func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,error){
-	log.Info("EthAPIBackend-----GetFileDataByHash","txHash",hash.String())
 	fd,err := b.eth.fdPool.Get(hash)
-	 if fd != nil {
-		return fd,nil
-	 }
-	 return nil,err
+	if fd != nil {
+		 return fd,nil
+ 	}
+	return nil,err
 }
 
-func (b *EthAPIBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
+func (b *EthAPIBackend) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData,[]error){
+	fileDatas := make([]*types.FileData,len(hashes))
+	errs := make([]error, len(hashes))
+	for inde,hash := range hashes {
+		log.Info("EthAPIBackend-----GetFileDataByHash","txHash",hash.String(),"index",inde)
+		fd,err := b.eth.fdPool.Get(hash)
+	 	if fd != nil {
+			fileDatas[inde] = fd
+  	}
+		errs[inde] = err
+	}
+	return fileDatas,errs
+}
+
+func (b *EthAPIBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error) {
+	flags := make([]bool, len(hashes))
+	errs := make([]error, len(hashes))
+	for index,hash := range hashes{
+		err := b.eth.fdPool.SaveFileDataToDisk(hash)
+		if err != nil {
+			flags[index] = false
+			errs[index] = err
+		}
+		flags[index] = true
+	}
+	return flags,errs
+}
+
+func (b *EthAPIBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error){
 	err := b.eth.fdPool.SaveFileDataToDisk(hash)
 	if err != nil {
 		return false,err
 	}
-	return true,nil
+	return true,err
 }
 
 func (b *EthAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {

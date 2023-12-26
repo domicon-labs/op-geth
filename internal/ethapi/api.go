@@ -1890,18 +1890,45 @@ func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
 }
 
-func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error){
+func (f *FileDataAPI) GetFileDataByHashes(hashes []common.Hash) ([]*RPCFileData,[]error){
+	rpcFileDatas := make([]*RPCFileData,len(hashes))
+	fds,errs := f.b.GetFileDataByHashes(hashes)
+	for index,fd := range fds {
+		rpcFd := NewRPCFileData(fd)
+		rpcFileDatas[index] = rpcFd
+	}
+	return rpcFileDatas,errs
+}
+
+func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error) {
 	fd,err := f.b.GetFileDataByHash(hash)
 	if err != nil {
 		return nil,err
 	}
 	rpcFd := NewRPCFileData(fd)
-	return rpcFd,err
+	return rpcFd,nil
 }
 
+
 func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
-    flag,err :=	f.b.DiskSaveFileDataWithHash(hash)
+	flag,err :=	f.b.DiskSaveFileDataWithHash(hash)
 	return flag,err
+}
+
+func (f *FileDataAPI) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error) {
+  flags := make([]bool,len(hashes)) 
+	errs := make([]error,len(hashes))
+	for index,hash := range hashes {
+		flag,err :=	f.b.DiskSaveFileDataWithHash(hash)
+		if !flag {
+			flags[index] = false
+		}else {
+			flags[index] = true
+		}
+		errs[index] = err
+	}
+	
+	return flags,errs
 }
 
 // TransactionAPI exposes methods for reading and creating transaction data.

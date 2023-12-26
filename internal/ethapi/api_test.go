@@ -568,15 +568,24 @@ type testBackend struct {
 	pending *types.Block
 }
 
+func (*testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error){
+	panic("unimplemented")
+}
+
 // DiskSaveFileDataWithHash implements Backend.
-func (*testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
+func (*testBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
 	panic("unimplemented")
 }
 
 // GetFileDataByHash implements Backend.
-func (*testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
+func (*testBackend) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
 	panic("unimplemented")
 }
+
+func (*testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,error) {
+	panic("unimplemented")
+}
+
 
 func newTestBackend(t *testing.T, n int, gspec *core.Genesis, engine consensus.Engine, generator func(i int, b *core.BlockGen)) *testBackend {
 	var (
