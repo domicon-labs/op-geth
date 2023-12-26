@@ -568,25 +568,6 @@ type testBackend struct {
 	pending *types.Block
 }
 
-func (*testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error){
-	panic("unimplemented")
-}
-
-// DiskSaveFileDataWithHash implements Backend.
-func (*testBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
-	panic("unimplemented")
-}
-
-// GetFileDataByHash implements Backend.
-func (*testBackend) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
-	panic("unimplemented")
-}
-
-func (*testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,error) {
-	panic("unimplemented")
-}
-
-
 func newTestBackend(t *testing.T, n int, gspec *core.Genesis, engine consensus.Engine, generator func(i int, b *core.BlockGen)) *testBackend {
 	var (
 		cacheConfig = &core.CacheConfig{
@@ -617,19 +598,38 @@ func (b *testBackend) setPendingBlock(block *types.Block) {
 }
 
 // SubscribeNewFileDataEvent implements Backend.
-func (*testBackend) SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription {
+func (b testBackend) SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription {
 	return nil
 }
 
 // UploadFileData implements Backend.
-func (*testBackend) UploadFileData(data []byte) error {
+func (b testBackend) UploadFileData(data []byte) error {
 	return nil
 }
 
 // UploadFileDataByParams implements Backend.
-func (*testBackend) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
+func (b testBackend) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
 	return nil
 }
+
+func (b testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool,error){
+	return true,nil
+}
+
+// DiskSaveFileDataWithHash implements Backend.
+func (b testBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
+	return []bool{true},[]error{}
+}
+
+// GetFileDataByHash implements Backend.
+func (b testBackend) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
+	return []*types.FileData{},[]error{}
+}
+
+func (b testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,error) {
+	return nil,nil
+}
+
 
 func (b testBackend) SyncProgress() ethereum.SyncProgress { return ethereum.SyncProgress{} }
 func (b testBackend) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
