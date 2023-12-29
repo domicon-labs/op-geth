@@ -64,15 +64,21 @@ type TxHashes struct{
 	TxHashes       []common.Hash      `json:"txhashes"`
 }
 
+func (ts *TxHashes) String() string {
+		data,err := json.Marshal(ts)	
+		if err != nil {
+			return ""
+		}
+		return string(data)
+}
+
 type Result struct{
 	Flags  					[]bool    `json:"flags"`
-	Errors					[]error   `json:"errors"`
 }
 
 func NewResult(length uint64) *Result{
 	return &Result{
 		Flags: make([]bool, length),
-		Errors: make([]error, length),
 	}
 }
 

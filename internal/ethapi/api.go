@@ -1896,17 +1896,16 @@ func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
 }
 
-func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) rpc.Result {
+func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) *rpc.Result {
 	log.Info("FileDataAPI----","GetFileDataByHashes---called--len(hashes)",len(hashes.TxHashes))
 	res := rpc.NewResult(uint64(len(hashes.TxHashes)))
 	for index,hash := range hashes.TxHashes {
-		fd,err := f.b.GetFileDataByHash(hash)
+		fd,_ := f.b.GetFileDataByHash(hash)
 		if fd != nil {
 			res.Flags[index] = true
 		}
-		res.Errors[index] = err
 	}
-	return *res
+	return res
 }
 
 func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error) {
@@ -1926,20 +1925,14 @@ func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
 }
 
 
-func (f *FileDataAPI) BatchSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error) {
-  flags := make([]bool,len(hashes)) 
-	errs := make([]error,len(hashes))
-	for index,hash := range hashes {
-		flag,err :=	f.b.DiskSaveFileDataWithHash(hash)
-		if !flag {
-			flags[index] = false
-		}else {
-			flags[index] = true
-		}
-		errs[index] = err
+func (f *FileDataAPI) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) *rpc.Result {
+	log.Info("FileDataAPI----","BatchSaveFileDataWithHashes---called--len(hashes)",len(hashes.TxHashes))
+  res := rpc.NewResult(uint64(len(hashes.TxHashes)))
+	for index,hash := range hashes.TxHashes {
+		flag,_ :=	f.b.DiskSaveFileDataWithHash(hash)
+		res.Flags[index] = flag
 	}
-	
-	return flags,errs
+	return res
 }
 
 func (f *FileDataAPI) ChangeCurrentState(state uint64,blockNr rpc.BlockNumber) bool {

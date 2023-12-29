@@ -98,7 +98,7 @@ func TestGetFileDataByHashes(t *testing.T){
 		println("DialContext-----err",err.Error())
 	}
 
-	res,err := client.GetBatchFileDataByHashes(context.TODO(),rpc.TxHashes{})
+	res,err := client.GetBatchFileDataByHashes(context.TODO(),rpc.TxHashes{TxHashes: []common.Hash{common.BytesToHash([]byte("2"))}})
 	if err != nil {
 		println("TestGetFileDataByHashes-----err",err.Error())
 	}
@@ -117,4 +117,17 @@ func TestChangeCurrentState(t *testing.T) {
 			println("err----",err.Error())
 	}
 	println("flag-----",flag)
+}
+
+func TestDiskSaveFileDataWithHashes(t *testing.T) {
+	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	if err != nil {
+		println("DialContext-----err",err.Error())
+	}
+
+	res,err := client.DiskSaveFileDataWithHashes(context.TODO(),rpc.TxHashes{TxHashes: []common.Hash{common.BytesToHash([]byte("2"))}})
+	if err != nil {
+		println("DialContext-----err",err.Error())
+	}
+	log.Info("test-----","fds",res)
 }
