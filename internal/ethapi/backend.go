@@ -88,7 +88,6 @@ type Backend interface {
 	UploadFileDataByParams(sender, submitter common.Address, index, length uint64, commitment, data, signData []byte, txHash common.Hash) error
 	UploadFileData(data []byte) error
 	GetFileDataByHash(hash common.Hash) (*types.FileData, error)
-	BatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error)
 	DiskSaveFileDataWithHash(hash common.Hash) (bool, error)
 	BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, []error)
 	ChangeCurrentState(state int, number rpc.BlockNumber) bool

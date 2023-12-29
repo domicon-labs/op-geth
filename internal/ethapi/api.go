@@ -1896,15 +1896,17 @@ func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
 }
 
-func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) ([]*RPCFileData,[]error){
+func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) rpc.Result {
 	log.Info("FileDataAPI----","GetFileDataByHashes---called--len(hashes)",len(hashes.TxHashes))
-	rpcFileDatas := make([]*RPCFileData,len(hashes.TxHashes))
-	fds,errs := f.b.BatchFileDataByHashes(hashes)
-	for index,fd := range fds {
-		rpcFd := NewRPCFileData(fd)
-		rpcFileDatas[index] = rpcFd
+	res := rpc.NewResult(uint64(len(hashes.TxHashes)))
+	for index,hash := range hashes.TxHashes {
+		fd,err := f.b.GetFileDataByHash(hash)
+		if fd != nil {
+			res.Flags[index] = true
+		}
+		res.Errors[index] = err
 	}
-	return rpcFileDatas,errs
+	return *res
 }
 
 func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error) {
@@ -1922,7 +1924,6 @@ func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
 	flag,err :=	f.b.DiskSaveFileDataWithHash(hash)
 	return flag,err
 }
-
 
 
 func (f *FileDataAPI) BatchSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error) {

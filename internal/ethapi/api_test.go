@@ -628,8 +628,8 @@ func (b testBackend) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, [
 }
 
 // GetFileDataByHash implements Backend.
-func (b testBackend) BatchBatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error) {
-	return []*types.FileData{}, []error{}
+func (b testBackend) BatchBatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
+	return []bool{}, []error{}
 }
 
 func (b testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
@@ -637,7 +637,7 @@ func (b testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error
 }
 
 // BatchFileDataByHashes implements Backend.
-func (b testBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error) {
+func (b testBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	panic("unimplemented")
 }
 

@@ -325,18 +325,18 @@ func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, er
 	return nil, err
 }
 
-func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error) {
+func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	log.Info("EthAPIBackend-----GetFileDataByHashes", "len(hashes)",len(hashes.TxHashes))
-	fileDatas := make([]*types.FileData, len(hashes.TxHashes))
+	flags := make([]bool, len(hashes.TxHashes))
 	errs := make([]error, len(hashes.TxHashes))
 	for inde, hash := range hashes.TxHashes {
 		fd, err := b.eth.fdPool.Get(hash)
 		if fd != nil {
-			fileDatas[inde] = fd
+			flags[inde] = true
 		}
 		errs[inde] = err
 	}
-	return fileDatas, errs
+	return flags, errs
 }
 
 func (b *EthAPIBackend) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, []error) {

@@ -98,11 +98,11 @@ func TestGetFileDataByHashes(t *testing.T){
 		println("DialContext-----err",err.Error())
 	}
 
-	fds,err := client.GetBatchFileDataByHashes(context.TODO(),[]common.Hash{common.BytesToHash([]byte("2"))})
+	res,err := client.GetBatchFileDataByHashes(context.TODO(),rpc.TxHashes{})
 	if err != nil {
 		println("TestGetFileDataByHashes-----err",err.Error())
 	}
-	log.Info("test-----","fds",fds)
+	log.Info("test-----","fds",res)
 }
 
 func TestChangeCurrentState(t *testing.T) {

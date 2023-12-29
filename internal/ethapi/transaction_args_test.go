@@ -241,7 +241,7 @@ func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData, error)
 	return nil, nil
 }
 
-func (*backendMock) BatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error) {
+func (*backendMock) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	return nil, nil
 }
 

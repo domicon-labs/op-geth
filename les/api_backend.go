@@ -67,7 +67,7 @@ func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, erro
 }
 
 // GetFileDataByHash implements ethapi.Backend.
-func (*LesApiBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error) {
+func (*LesApiBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	panic("unimplemented")
 }
 

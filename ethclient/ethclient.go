@@ -310,19 +310,10 @@ func (ec *Client) UploadFileDataByParams(ctx context.Context,sender common.Addre
 	return tmpErr
 }
 
-func (ec *Client) GetBatchFileDataByHashes(ctx context.Context,hashes []common.Hash) ([]RPCFileData,error){
-	fds := make([]RPCFileData,len(hashes)) 
-// batch := make([]rpc.BatchElem,0)
-// for _,hash := range hashes {
-// 	b := []rpc.BatchElem{
-// 		{Method: "eth_getFileDataByHash",Args:[]interface{}{hash} ,Result: new(RPCFileData)},
-// 	 }
-// 	batch = append(batch, b...)
-// }
-//err := ec.c.BatchCallContext(ctx,batch)
-	// log.Info("client---GetFileDataByHashes---iscalling---")
-	 err := ec.c.CallContext(ctx,&fds,"eth_batchFileDataByHashes",hashes)
-	return fds,err
+func (ec *Client) GetBatchFileDataByHashes(ctx context.Context,hashes rpc.TxHashes) (rpc.Result,error) {
+	var res rpc.Result 
+	err := ec.c.CallContext(ctx,&res,"eth_batchFileDataByHashes",hashes)
+	return res,err
 }
 
 func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFileData,error){

@@ -64,7 +64,17 @@ type TxHashes struct{
 	TxHashes       []common.Hash      `json:"txhashes"`
 }
 
+type Result struct{
+	Flags  					[]bool    `json:"flags"`
+	Errors					[]error   `json:"errors"`
+}
 
+func NewResult(length uint64) *Result{
+	return &Result{
+		Flags: make([]bool, length),
+		Errors: make([]error, length),
+	}
+}
 
 type BlockNumber int64
 
