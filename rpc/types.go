@@ -59,6 +59,13 @@ type jsonWriter interface {
 	remoteAddr() string
 }
 
+
+type TxHashes struct{
+	TxHashes       []common.Hash      `json:"txhashes"`
+}
+
+
+
 type BlockNumber int64
 
 const (
@@ -141,6 +148,10 @@ func (bn BlockNumber) String() string {
 		return hexutil.Uint64(bn).String()
 	}
 }
+
+
+
+
 
 type BlockNumberOrHash struct {
 	BlockNumber      *BlockNumber `json:"blockNumber,omitempty"`

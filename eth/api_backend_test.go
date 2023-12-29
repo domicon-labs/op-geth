@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 const (
@@ -88,4 +89,32 @@ func TestDiskFileData(t *testing.T) {
 		println("DiskSaveFileDataWithHash----err",err.Error())
 	}
 	log.Info("test-----","flag",flag)
+}
+
+
+func TestGetFileDataByHashes(t *testing.T){
+	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	if err != nil {
+		println("DialContext-----err",err.Error())
+	}
+
+	fds,err := client.GetBatchFileDataByHashes(context.TODO(),[]common.Hash{common.BytesToHash([]byte("2"))})
+	if err != nil {
+		println("TestGetFileDataByHashes-----err",err.Error())
+	}
+	log.Info("test-----","fds",fds)
+}
+
+func TestChangeCurrentState(t *testing.T) {
+	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	if err != nil {
+		println("DialContext-----err",err.Error())
+	}
+
+	
+	flag,err := client.ChangeCurrentState(context.TODO(),1,rpc.BlockNumber(10))
+	if err != nil {
+			println("err----",err.Error())
+	}
+	println("flag-----",flag)
 }

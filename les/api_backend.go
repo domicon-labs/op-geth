@@ -49,12 +49,12 @@ type LesApiBackend struct {
 }
 
 // ChangeCurrentState implements ethapi.Backend.
-func (*LesApiBackend) ChangeCurrentState(state int, numberOrHash rpc.BlockNumberOrHash) bool {
+func (*LesApiBackend) ChangeCurrentState(state int, number rpc.BlockNumber) bool {
 	panic("unimplemented")
 }
 
 // DiskSaveFileDataWithHash implements ethapi.Backend.
-func (*LesApiBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
+func (*LesApiBackend) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	panic("unimplemented")
 }
 
@@ -67,7 +67,7 @@ func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, erro
 }
 
 // GetFileDataByHash implements ethapi.Backend.
-func (*LesApiBackend) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
+func (*LesApiBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error) {
 	panic("unimplemented")
 }
 

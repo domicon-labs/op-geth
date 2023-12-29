@@ -213,7 +213,7 @@ type backendMock struct {
 }
 
 // ChangeCurrentState implements Backend.
-func (*backendMock) ChangeCurrentState(state int, numberOrHash rpc.BlockNumberOrHash) bool {
+func (*backendMock) ChangeCurrentState(state int, number rpc.BlockNumber) bool {
 	panic("unimplemented")
 }
 
@@ -241,11 +241,11 @@ func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData, error)
 	return nil, nil
 }
 
-func (*backendMock) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
+func (*backendMock) BatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error) {
 	return nil, nil
 }
 
-func (*backendMock) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
+func (*backendMock) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	return nil, nil
 }
 

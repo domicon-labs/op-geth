@@ -85,13 +85,13 @@ type Backend interface {
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 
 	// FileData pool API
-	UploadFileDataByParams(sender,submitter common.Address,index,length uint64,commitment,data,signData []byte,txHash common.Hash) error
+	UploadFileDataByParams(sender, submitter common.Address, index, length uint64, commitment, data, signData []byte, txHash common.Hash) error
 	UploadFileData(data []byte) error
-	GetFileDataByHash(hash common.Hash) (*types.FileData,error)
-	GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData,[]error)
-	DiskSaveFileDataWithHash(hash common.Hash) (bool,error)
-	DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error)
-	ChangeCurrentState(state int,numberOrHash rpc.BlockNumberOrHash) bool
+	GetFileDataByHash(hash common.Hash) (*types.FileData, error)
+	BatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error)
+	DiskSaveFileDataWithHash(hash common.Hash) (bool, error)
+	BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, []error)
+	ChangeCurrentState(state int, number rpc.BlockNumber) bool
 	SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription
 
 	ChainConfig() *params.ChainConfig
@@ -123,13 +123,13 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 		}, {
 			Namespace: "eth",
 			Service:   NewTransactionAPI(apiBackend, nonceLock),
-		},{
+		}, {
 			Namespace: "eth",
-			Service:  NewFileDataAPI(apiBackend),
-		},{
+			Service:   NewFileDataAPI(apiBackend),
+		}, {
 			Namespace: "txpool",
 			Service:   NewTxPoolAPI(apiBackend),
-		},{
+		}, {
 			Namespace: "debug",
 			Service:   NewDebugAPI(apiBackend),
 		}, {

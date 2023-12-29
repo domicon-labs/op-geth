@@ -568,6 +568,7 @@ type testBackend struct {
 	pending *types.Block
 }
 
+
 func newTestBackend(t *testing.T, n int, gspec *core.Genesis, engine consensus.Engine, generator func(i int, b *core.BlockGen)) *testBackend {
 	var (
 		cacheConfig = &core.CacheConfig{
@@ -617,23 +618,29 @@ func (b testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 }
 
 // ChangeCurrentState implements Backend.
-func (b testBackend) ChangeCurrentState(state int, numberOrHash rpc.BlockNumberOrHash) bool {
+func (b testBackend) ChangeCurrentState(state int, number rpc.BlockNumber) bool {
 	panic("unimplemented")
 }
 
 // DiskSaveFileDataWithHash implements Backend.
-func (b testBackend) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool, []error) {
+func (b testBackend) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	return []bool{true}, []error{}
 }
 
 // GetFileDataByHash implements Backend.
-func (b testBackend) GetFileDataByHashes(hashes []common.Hash) ([]*types.FileData, []error) {
+func (b testBackend) BatchBatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error) {
 	return []*types.FileData{}, []error{}
 }
 
 func (b testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
 	return nil, nil
 }
+
+// BatchFileDataByHashes implements Backend.
+func (b testBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]*types.FileData, []error) {
+	panic("unimplemented")
+}
+
 
 func (b testBackend) SyncProgress() ethereum.SyncProgress { return ethereum.SyncProgress{} }
 func (b testBackend) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {

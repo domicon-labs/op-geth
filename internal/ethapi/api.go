@@ -1550,7 +1550,7 @@ type RPCFileData struct {
 	Index          hexutil.Uint64	`json:"index"`
 	Commitment     hexutil.Bytes    `json:"commitment"`
 	Data           hexutil.Bytes	`json:"data"`
-	Sign  		   hexutil.Bytes	`json:"sign"`
+	Sign  		  	 hexutil.Bytes	`json:"sign"`
 	TxHash         common.Hash      `json:"txhash"`
 }
 
@@ -1568,6 +1568,11 @@ func NewRPCFileData(fd *types.FileData) *RPCFileData{
 
 	return result
 }
+
+type RPCTxHashes struct{
+	TxHashes       []common.Hash      `json:"txhashes"`
+}
+
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
 type RPCTransaction struct {
@@ -1891,9 +1896,10 @@ func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
 }
 
-func (f *FileDataAPI) GetFileDataByHashes(hashes []common.Hash) ([]*RPCFileData,[]error){
-	rpcFileDatas := make([]*RPCFileData,len(hashes))
-	fds,errs := f.b.GetFileDataByHashes(hashes)
+func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) ([]*RPCFileData,[]error){
+	log.Info("FileDataAPI----","GetFileDataByHashes---called--len(hashes)",len(hashes.TxHashes))
+	rpcFileDatas := make([]*RPCFileData,len(hashes.TxHashes))
+	fds,errs := f.b.BatchFileDataByHashes(hashes)
 	for index,fd := range fds {
 		rpcFd := NewRPCFileData(fd)
 		rpcFileDatas[index] = rpcFd
@@ -1902,6 +1908,7 @@ func (f *FileDataAPI) GetFileDataByHashes(hashes []common.Hash) ([]*RPCFileData,
 }
 
 func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error) {
+	log.Info("FileDataAPI----","GetFileDataByHash---called--",hash.String())
 	fd,err := f.b.GetFileDataByHash(hash)
 	if err != nil {
 		return nil,err
@@ -1916,7 +1923,9 @@ func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
 	return flag,err
 }
 
-func (f *FileDataAPI) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error) {
+
+
+func (f *FileDataAPI) BatchSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[]error) {
   flags := make([]bool,len(hashes)) 
 	errs := make([]error,len(hashes))
 	for index,hash := range hashes {
@@ -1932,8 +1941,8 @@ func (f *FileDataAPI) DiskSaveFileDataWithHashes(hashes []common.Hash) ([]bool,[
 	return flags,errs
 }
 
-func (f *FileDataAPI) ChangeCurrentState(state int,blockNrOrHash rpc.BlockNumberOrHash) bool {
-	db, header, err := f.b.StateAndHeaderByNumberOrHash(context.TODO(), blockNrOrHash)
+func (f *FileDataAPI) ChangeCurrentState(state uint64,blockNr rpc.BlockNumber) bool {
+	db, header, err := f.b.StateAndHeaderByNumber(context.TODO(), blockNr)
 	if db == nil || err != nil || header == nil{
 		return false
 	}

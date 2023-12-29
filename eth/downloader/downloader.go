@@ -71,6 +71,7 @@ var (
 	errInvalidAncestor         = errors.New("retrieved ancestor is invalid")
 	errInvalidChain            = errors.New("retrieved hash chain is invalid")
 	errInvalidBody             = errors.New("retrieved block body is invalid")
+	ErrInvalidTxTypeSubmit     = errors.New("retrieved tx type Submit is invalid")
 	errInvalidReceipt          = errors.New("retrieved receipt is invalid")
 	errCancelStateFetch        = errors.New("state data download canceled (requested)")
 	errCancelContentProcessing = errors.New("content processing canceled (requested)")

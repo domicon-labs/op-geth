@@ -37,6 +37,7 @@ import (
 const (
 	bodyType    = uint(0)
 	receiptType = uint(1)
+	fileDataType= uint(2)
 )
 
 var (
@@ -68,6 +69,7 @@ type fetchResult struct {
 	Uncles       []*types.Header
 	Transactions types.Transactions
 	Receipts     types.Receipts
+	FileDatas    types.FileDatas
 	Withdrawals  types.Withdrawals
 }
 
@@ -105,6 +107,13 @@ func (f *fetchResult) SetReceiptsDone() {
 	}
 }
 
+// SetFileDatasDone flags the fileData as finished.
+func (f *fetchResult) SetFileDatasDone() {
+	if v := f.pending.Load(); (v & (1 << fileDataType)) != 0 {
+		f.pending.Add(-2)
+	}
+}
+
 // Done checks if the given type is done already
 func (f *fetchResult) Done(kind uint) bool {
 	v := f.pending.Load()
@@ -137,6 +146,9 @@ type queue struct {
 	receiptTaskQueue *prque.Prque[int64, *types.Header] // Priority queue of the headers to fetch the receipts for
 	receiptPendPool  map[string]*fetchRequest           // Currently pending receipt retrieval operations
 	receiptWakeCh    chan bool                          // Channel to notify when receipt fetcher of new tasks
+
+	//fileDataTaskPool  
+
 
 	resultCache *resultStore       // Downloaded but not yet delivered fetch results
 	resultSize  common.StorageSize // Approximate size of a block (exponential moving average)
@@ -375,6 +387,11 @@ func (q *queue) Results(block bool) []*fetchResult {
 		for _, tx := range result.Transactions {
 			size += common.StorageSize(tx.Size())
 		}
+
+		for _,fd := range result.FileDatas {
+			size += common.StorageSize(fd.Size())
+		}
+
 		q.resultSize = common.StorageSize(blockCacheSizeWeight)*size +
 			(1-common.StorageSize(blockCacheSizeWeight))*q.resultSize
 	}
@@ -777,6 +794,9 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction, txListH
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
+	timeNow := time.Now()
+	twoDaysAgo := timeNow.AddDate(0, 0, -3)
+	
 	validate := func(index int, header *types.Header) error {
 		if txListHashes[index] != header.TxHash {
 			return errInvalidBody
@@ -803,7 +823,6 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction, txListH
 		for _, tx := range txLists[index] {
 			// Count the number of blobs to validate against the header's blobGasUsed
 			blobs += len(tx.BlobHashes())
-
 			// Validate the data blobs individually too
 			if tx.Type() == types.BlobTxType {
 				if len(tx.BlobHashes()) == 0 {
@@ -817,6 +836,16 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction, txListH
 				if tx.BlobTxSidecar() != nil {
 					return errInvalidBody
 				}
+			}else if (int(tx.Type()) == types.SubmitTxType){
+				if len(tx.SourceHash()) == 0{
+						return ErrInvalidTxTypeSubmit
+				}
+
+				//TODO By echo
+				if tx.Time().After(twoDaysAgo) {
+					
+				}
+
 			}
 		}
 		if header.BlobGasUsed != nil {

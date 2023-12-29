@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -222,7 +223,7 @@ type RPCFileData struct {
 	Index          hexutil.Uint64		`json:"index"`
 	Commitment     hexutil.Bytes    `json:"commitment"`	
 	Data           hexutil.Bytes		`json:"data"`
-	Sign  		   hexutil.Bytes			`json:"sign"`
+	Sign  		  	 hexutil.Bytes		`json:"sign"`
 	TxHash         common.Hash      `json:"txhash"`
 }
 
@@ -309,21 +310,31 @@ func (ec *Client) UploadFileDataByParams(ctx context.Context,sender common.Addre
 	return tmpErr
 }
 
-func (ec *Client) GetFileDataByHashes(ctx context.Context,hashes []common.Hash) ([]RPCFileData,error){
+func (ec *Client) GetBatchFileDataByHashes(ctx context.Context,hashes []common.Hash) ([]RPCFileData,error){
 	fds := make([]RPCFileData,len(hashes)) 
-	err := ec.c.CallContext(ctx,&fds,"eth_getFileDataByHashes",hashes)
+// batch := make([]rpc.BatchElem,0)
+// for _,hash := range hashes {
+// 	b := []rpc.BatchElem{
+// 		{Method: "eth_getFileDataByHash",Args:[]interface{}{hash} ,Result: new(RPCFileData)},
+// 	 }
+// 	batch = append(batch, b...)
+// }
+//err := ec.c.BatchCallContext(ctx,batch)
+	// log.Info("client---GetFileDataByHashes---iscalling---")
+	 err := ec.c.CallContext(ctx,&fds,"eth_batchFileDataByHashes",hashes)
 	return fds,err
 }
 
 func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFileData,error){
 	var fd RPCFileData
+	log.Info("client---GetFileDataByHash---iscalling---")
 	err := ec.c.CallContext(ctx,&fd,"eth_getFileDataByHash",hash)
 	return fd,err
 }
 
-func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context,hashes []common.Hash) ([]bool,error){
-	flags := make([]bool,len(hashes))
-	err := ec.c.CallContext(ctx,&flags,"eth_diskSaveFileDataWithHashes",hashes)	
+func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context,hashes rpc.TxHashes) ([]bool,error){
+	flags := make([]bool,len(hashes.TxHashes))
+	err := ec.c.CallContext(ctx,&flags,"eth_batchSaveFileDataWithHashes",hashes)	
 	return flags,err
 }
 
@@ -333,9 +344,9 @@ func (ec *Client) DiskSaveFileDataWithHash(ctx context.Context,hash common.Hash)
 	return flag,err
 }
 
-func (ec *Client) ChangeCurrentState(ctx context.Context,state int,blockNrOrHash rpc.BlockNumberOrHash) (bool,error) {
+func (ec *Client) ChangeCurrentState(ctx context.Context,state int,blockNr rpc.BlockNumber) (bool,error) {
 	var flag bool
-	err := ec.c.CallContext(ctx,&flag,"eth_changeCurrentState",blockNrOrHash.String())
+	err := ec.c.CallContext(ctx,&flag,"eth_changeCurrentState",state,blockNr.String())
 	return flag,err
 }
 
