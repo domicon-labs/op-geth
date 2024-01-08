@@ -1925,16 +1925,15 @@ func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
 }
 
 
-func (f *FileDataAPI) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) *rpc.Result {
+func (f *FileDataAPI) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) (bool,error) {
 	log.Info("FileDataAPI----2","BatchSaveFileDataWithHashes---called--len(hashes)",len(hashes.TxHashes))
-  res := rpc.NewResult(0)
+  //res := rpc.NewResult(0)
 	blocNrOrHash := rpc.BlockNumberOrHash{
 		BlockNumber: &hashes.BlockNumber,
 		BlockHash: &hashes.BlockHash,
 	}
-	resFlg,_ := f.b.DiskSaveFileDatas(hashes.TxHashes,blocNrOrHash)
-	res.Flags = resFlg
-	return res
+	resFlg,err := f.b.DiskSaveFileDatas(hashes.TxHashes,blocNrOrHash)
+	return resFlg,err
 }
 
 func (f *FileDataAPI) ChangeCurrentState(state uint64,blockNr rpc.BlockNumber) bool {

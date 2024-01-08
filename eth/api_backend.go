@@ -361,9 +361,9 @@ func (b *EthAPIBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error)
 	return true, err
 }
 
-func (b *EthAPIBackend) DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) ([]bool, error) {
-	flags,err := b.eth.fdPool.SaveBatchFileDatasToDisk(hashed,*blockNrOrHash.BlockHash,uint64(*blockNrOrHash.BlockNumber))
-	return flags,err
+func (b *EthAPIBackend) DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+	flag,err := b.eth.fdPool.SaveBatchFileDatasToDisk(hashed,*blockNrOrHash.BlockHash,uint64(*blockNrOrHash.BlockNumber))
+	return flag,err
 }
 
 // ChangeCurrentState implements ethapi.Backend.

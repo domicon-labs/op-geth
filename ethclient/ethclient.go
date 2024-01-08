@@ -323,8 +323,9 @@ func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFi
 	return fd,err
 }
 
-func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context,hashes rpc.TxHashes) (rpc.Result,error){
-	var res rpc.Result
+func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context,hashes rpc.TxHashes) (bool,error){
+	//var res rpc.Result
+	var res bool
 	err := ec.c.CallContext(ctx,&res,"eth_batchSaveFileDataWithHashes",hashes)	
 	return res,err
 }

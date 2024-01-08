@@ -617,8 +617,8 @@ func (b testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	return true, nil
 }
 
-func (b testBackend)  DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) ([]bool, error) {
-	return []bool{true}, nil
+func (b testBackend) DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+	return true, nil
 }
 
 // ChangeCurrentState implements Backend.

@@ -222,8 +222,8 @@ func (*backendMock) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	panic("unimplemented")
 }
 
-func (*backendMock)  DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) ([]bool, error) {
-	return []bool{true}, nil
+func (*backendMock)  DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+	return true, nil
 }
 
 // SubscribeNewFileDataEvent implements Backend.

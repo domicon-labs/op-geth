@@ -464,20 +464,18 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	return nil
 }
 
-func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common.Hash,blcNr uint64) ([]bool,error) {
+func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common.Hash,blcNr uint64) (bool,error) {
 	list := make([]*types.FileData,0)
-	res := make([]bool,len(hashes))
-	for index,hash := range hashes {
+	for _,hash := range hashes {
 		fd, ok := fp.all.collector[hash]
 		if !ok {
-			res[index] = false
+			return false,errors.New("don not have that fileDATA")
 		}
 		block := fp.chain.GetBlock(blcHash,blcNr)
 		if block == nil {
-			return []bool{false},nil
+			return false,nil
 		}
 		list = append(list, fd)
-		res[index] = true
 		state,err := fp.chain.StateAt(block.Header().Root)
 		if err == nil {
 			fp.currentState = state
@@ -491,7 +489,7 @@ func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common
 	for _,hash := range hashes {
 		fp.removeFileData(hash)
 	}
-	return res,nil
+	return true,nil
 }
 
 func (fp *FilePool) removeFileData(hash common.Hash) error {
