@@ -360,6 +360,12 @@ var (
 		Category: flags.FileDataCategory,
 	}
 
+	FileDataGlobalSlotsFlag = &cli.Uint64Flag{
+		Name:     "filedatapool.globalslots",
+		Usage:    "Maximum number of executable fileData slots for all accounts",
+		Value:    ethconfig.Defaults.FileDataPool.GlobalSlots,
+		Category: flags.FileDataCategory,
+	}
 	// Transaction pool settings
 	TxPoolLocalsFlag = &cli.StringFlag{
 		Name:     "txpool.locals",
@@ -1647,6 +1653,10 @@ func setFileDataPool(ctx *cli.Context, cfg *filedatapool.Config){
 
 	if ctx.IsSet(FileDataRejournalFlag.Name) {
 		cfg.Rejournal = ctx.Duration(FileDataRejournalFlag.Name)
+	}
+
+	if ctx.IsSet(FileDataGlobalSlotsFlag.Name) {
+		cfg.GlobalSlots = ctx.Uint64(FileDataGlobalSlotsFlag.Name)
 	}
 
 }
