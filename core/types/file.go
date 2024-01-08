@@ -36,7 +36,6 @@ func NewFileData(sender, submitter common.Address, index,length uint64, commitme
 	}
 }
 
-
 func (f *FileData) Encode() ([]byte, error) {
 	data, err := rlp.EncodeToBytes(f)
 	return data, err

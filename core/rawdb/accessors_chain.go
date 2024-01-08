@@ -19,6 +19,7 @@ package rawdb
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -690,6 +691,39 @@ func DeleteReceipts(db ethdb.KeyValueWriter, hash common.Hash, number uint64) {
 		log.Crit("Failed to delete block receipts", "err", err)
 	}
 }
+
+// ReadFileDatas retrieves all the fileDatas belonging to a block, including
+// its corresponding metadata fields. If it is unable to populate these metadata
+// fields then nil is returned.
+//
+func ReadFileDatas(db ethdb.Reader, hash common.Hash, number uint64) []*types.FileData {
+	data,err := db.Get(blockBodyKey(number,hash))
+	if err != nil || len(data) == 0 {
+		return nil
+	}
+
+	fds := make([]*types.FileData,0)  
+	err = json.Unmarshal(data,&fds)
+	if err != nil {
+		return nil
+	}
+	return fds
+}
+
+
+// WriteFileDatas stores all the fileDatas belonging to a block.
+func WriteFileDatas(db ethdb.KeyValueWriter, hash common.Hash, number uint64,fileDatas []*types.FileData) {
+	 data,err := json.Marshal(fileDatas)
+	 if err != nil {
+			log.Error("WriteFileDatas--json marshal failed","err",err.Error())
+	 }
+
+	 err = db.Put(blockFileDatasKey(number,hash),data)
+	 if err != nil {
+			log.Error("WriteFileDatas--desk save failed","err",err.Error())
+	 }
+}
+
 
 // storedReceiptRLP is the storage encoding of a receipt.
 // Re-definition in core/types/receipt.go.

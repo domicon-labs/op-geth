@@ -89,10 +89,10 @@ type Backend interface {
 	UploadFileData(data []byte) error
 	GetFileDataByHash(hash common.Hash) (*types.FileData, error)
 	DiskSaveFileDataWithHash(hash common.Hash) (bool, error)
+	DiskSaveFileDatas(hashes []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) ([]bool, error)
 	BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, []error)
 	ChangeCurrentState(state int, number rpc.BlockNumber) bool
 	SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription
-
 	ChainConfig() *params.ChainConfig
 	Engine() consensus.Engine
 	HistoricalRPCService() *rpc.Client

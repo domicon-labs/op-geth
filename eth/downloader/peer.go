@@ -63,6 +63,7 @@ type Peer interface {
 
 	RequestBodies([]common.Hash, chan *eth.Response) (*eth.Request, error)
 	RequestReceipts([]common.Hash, chan *eth.Response) (*eth.Request, error)
+	StartRequestFileDatas([]common.Hash, chan *eth.Response) (*eth.Request, error)
 }
 
 // newPeerConnection creates a new downloader peer.
@@ -102,6 +103,12 @@ func (p *peerConnection) UpdateReceiptRate(delivered int, elapsed time.Duration)
 	p.rates.Update(eth.ReceiptsMsg, elapsed, delivered)
 }
 
+// UpdateFileDataRate updates the peer's estimated fileData retrieval throughput
+// with the current measurement.
+func (p *peerConnection) UpdateFileDataRate(delivered int, elapsed time.Duration) {
+	p.rates.Update(eth.ResFileDatasMsg, elapsed, delivered)
+}
+
 // HeaderCapacity retrieves the peer's header download allowance based on its
 // previously discovered throughput.
 func (p *peerConnection) HeaderCapacity(targetRTT time.Duration) int {
@@ -128,6 +135,16 @@ func (p *peerConnection) ReceiptCapacity(targetRTT time.Duration) int {
 	cap := p.rates.Capacity(eth.ReceiptsMsg, targetRTT)
 	if cap > MaxReceiptFetch {
 		cap = MaxReceiptFetch
+	}
+	return cap
+}
+
+// FileDataCapacity retrieves the peers fileData download allowance based on its
+// previously discovered throughput.
+func (p *peerConnection) FileDataCapacity(targetRTT time.Duration) int {
+	cap := p.rates.Capacity(eth.FileDataMsg, targetRTT)
+	if cap > MaxFileDataFetch {
+		cap = MaxFileDataFetch
 	}
 	return cap
 }

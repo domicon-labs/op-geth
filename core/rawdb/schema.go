@@ -102,6 +102,7 @@ var (
 
 	blockBodyPrefix     = []byte("b") // blockBodyPrefix + num (uint64 big endian) + hash -> block body
 	blockReceiptsPrefix = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
+	blockFileDatasPrefix= []byte("F") // blockFileDatasPrefix + num (uint64 big endian) + hash -> block fileDatas
 
 	txLookupPrefix        = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
 	fdLookupPrefix        = []byte("f") // fdLookupPrefix + hash -> fileData DiskSaved lookup metadata
@@ -199,6 +200,11 @@ func blockBodyKey(number uint64, hash common.Hash) []byte {
 // blockReceiptsKey = blockReceiptsPrefix + num (uint64 big endian) + hash
 func blockReceiptsKey(number uint64, hash common.Hash) []byte {
 	return append(append(blockReceiptsPrefix, encodeBlockNumber(number)...), hash.Bytes()...)
+}
+
+// blockFileDatasKey = blockFileDatasKey + num (uint64 big endian) + hash
+func blockFileDatasKey(number uint64, hash common.Hash) []byte {
+	return append(append(blockFileDatasPrefix, encodeBlockNumber(number)...), hash.Bytes()...)
 }
 
 // txLookupKey = txLookupPrefix + hash

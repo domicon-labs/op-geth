@@ -49,7 +49,15 @@ const (
 	// number is mostly there to limit the number of disk lookups. With block
 	// containing 200+ transactions nowadays, the practical limit will always
 	// be softResponseLimit.
+	
 	maxReceiptsServe = 1024
+
+	// maxFileDatasServe is the maximum number of block fileDatas to serve. This
+	// number is mostly there to limit the number of disk lookups.
+	maxFileDatasServe = 60
+
+	// fileDataSoftResponseLimit is the target maximum size of replies to data retrievals.
+	fileDataSoftResponseLimit = 30 * 1024 * 1024
 )
 
 // Handler is a callback to invoke from an outside runner after the boilerplate
@@ -190,11 +198,13 @@ var eth67 = map[uint64]msgHandler{
 	GetReceiptsMsg:                handleGetReceipts,
 	ReceiptsMsg:                   handleReceipts,
 	GetPooledTransactionsMsg:      handleGetPooledTransactions,
-	FileDataMsg:				   handleFileDatas,
+	FileDataMsg:				   				 handleFileDatas,
+	ResFileDatasMsg:							 handleResFileDatas,
+ 	ReqFileDatasMsg:							 handleReqFileDatas,	
 	PooledTransactionsMsg:         handlePooledTransactions,
 	GetPooledFileDatasMsg:         handleGetPooledFileDatas,
 	NewPooledFileDataHashesMsg:    handleNewPooledFileDataHashes67,
-	PooledFileDatasMsg:			   handlePooledFileDatas,
+	PooledFileDatasMsg:			  		 handlePooledFileDatas,
 }
 
 var eth68 = map[uint64]msgHandler{
@@ -210,10 +220,12 @@ var eth68 = map[uint64]msgHandler{
 	ReceiptsMsg:                   handleReceipts,
 	GetPooledTransactionsMsg:      handleGetPooledTransactions,
 	PooledTransactionsMsg:         handlePooledTransactions,
-	FileDataMsg:				   handleFileDatas,
+	FileDataMsg:				  				 handleFileDatas,
+	ReqFileDatasMsg:							 handleReqFileDatas,
+ 	ResFileDatasMsg:							 handleResFileDatas,	
 	GetPooledFileDatasMsg:         handleGetPooledFileDatas,
 	NewPooledFileDataHashesMsg:    handleNewPooledFileDataHashes68,
-	PooledFileDatasMsg:			   handlePooledFileDatas,
+	PooledFileDatasMsg:			 		   handlePooledFileDatas,
 }
 
 // handleMessage is invoked whenever an inbound message is received from a remote

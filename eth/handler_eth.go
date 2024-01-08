@@ -26,7 +26,9 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // ethHandler implements the eth.Backend interface to handle the various network
@@ -116,6 +118,25 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 
 	case *eth.PooledFileDataResponse:	
 		return h.fdFetcher.Enqueue(peer.ID(), *packet, true)
+
+	case *eth.FileDatasResponse:
+
+		log.Info("handle-----receive FileDatasResponse")	
+		var btfd eth.BantchFileData
+	  err := rlp.DecodeBytes(*packet,&btfd)
+		if err != nil {
+			log.Error("handle---FileDatasResponse msg decode","err",err.Error())
+		}
+		//decode to fileData
+		fds := make([]*types.FileData, len(btfd.FileDatas))
+		for indx,data := range btfd.FileDatas {
+			var fd types.FileData	
+			err = rlp.DecodeBytes(data,&fd)
+			if err == nil {
+				fds[indx] = &fd
+			}
+		}
+		return h.fdFetcher.Enqueue(peer.ID(),fds,true)
 
 	default:
 		return fmt.Errorf("unexpected eth packet type: %T", packet)

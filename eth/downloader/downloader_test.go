@@ -328,6 +328,10 @@ func (dlp *downloadTesterPeer) RequestReceipts(hashes []common.Hash, sink chan *
 	return req, nil
 }
 
+func (dlp *downloadTesterPeer) StartRequestFileDatas(hashes []common.Hash, sink chan *eth.Response) (*eth.Request, error) {
+	return  nil,nil
+}
+
 // ID retrieves the peer's unique identifier.
 func (dlp *downloadTesterPeer) ID() string {
 	return dlp.id

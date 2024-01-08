@@ -62,6 +62,10 @@ func (*LesApiBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	panic("unimplemented")
 }
 
+func (*LesApiBackend) DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) ([]bool, error) {
+	return []bool{true},nil
+}
+
 func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
 	panic("unimplemented")
 }

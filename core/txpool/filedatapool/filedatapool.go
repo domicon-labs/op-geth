@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -80,7 +81,7 @@ type BlockChain interface {
 	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
-type diskDetail struct {
+type DiskDetail struct {
 	TxHash        common.Hash 			`json:"TxHash"`
 	State         DISK_FILEDATA_STATE	`json:"State"`
 	TimeRecord    time.Time				`json:"TimeRecord"`
@@ -88,12 +89,12 @@ type diskDetail struct {
 }
 
 type DiskCache struct {
-   Cache  map[common.Hash]diskDetail   `json:"Cache"`
+   Cache  map[common.Hash]DiskDetail   `json:"Cache"`
 }
 
 func NewDiskCache() *DiskCache{
 	return &DiskCache{
-		Cache: make(map[common.Hash]diskDetail),
+		Cache: make(map[common.Hash]DiskDetail),
 	}
 }
 
@@ -109,7 +110,7 @@ type FilePool struct {
 	journal         *journal                // Journal of local fileData to back up to disk
 	subs            event.SubscriptionScope // Subscription scope to unsubscribe all on shutdown
 	all             *lookup
-	diskCache				map[common.Hash]diskDetail 
+	diskCache				map[common.Hash]DiskDetail 
 	collector       map[common.Hash]*types.FileData
 	beats           map[common.Hash]time.Time // Last heartbeat from each known account
 	reorgDoneCh     chan chan struct{}
@@ -121,11 +122,11 @@ type FilePool struct {
 func New(config Config, chain BlockChain) *FilePool {
 	fp := &FilePool{
 		config:          config,
-		chain:			 chain,		
+		chain:			 		 chain,		
 		chainconfig:     chain.Config(),
 		signer:          types.LatestSigner(chain.Config()),
 		all:             newLookup(),
-		diskCache:		 make(map[common.Hash]diskDetail),
+		diskCache:			 make(map[common.Hash]DiskDetail),
 		collector:       make(map[common.Hash]*types.FileData),
 		beats:           make(map[common.Hash]time.Time),
 		reorgDoneCh:     make(chan chan struct{}),
@@ -437,7 +438,7 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 
 	diskDb := fp.currentState.Database().DiskDB()
 
-	fp.diskCache[hash] = diskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
+	fp.diskCache[hash] = DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
 
 	cache := NewDiskCache()
 	for hash,info := range fp.diskCache{
@@ -453,6 +454,36 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	diskDb.Put(HashListKey, data)
 	fp.removeFileData(hash)
 	return nil
+}
+
+func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common.Hash,blcNr uint64) ([]bool,error) {
+	list := make([]*types.FileData,0)
+	res := make([]bool,len(hashes))
+	for index,hash := range hashes {
+		fd, ok := fp.all.collector[hash]
+		if !ok {
+			res[index] = false
+		}
+		block := fp.chain.GetBlock(blcHash,blcNr)
+		if block == nil {
+			return []bool{false},nil
+		}
+		list = append(list, fd)
+		res[index] = true
+		state,err := fp.chain.StateAt(block.Header().Root)
+		if err == nil {
+			fp.currentState = state
+			fp.currentHead.Store(block.Header())
+		}
+	}
+
+	db := fp.currentState.Database().DiskDB()
+	rawdb.WriteFileDatas(db,blcHash,blcNr,list)
+	
+	for _,hash := range hashes {
+		fp.removeFileData(hash)
+	}
+	return res,nil
 }
 
 func (fp *FilePool) removeFileData(hash common.Hash) error {

@@ -230,6 +230,21 @@ func (bc *BlockChain) GetReceiptsByHash(hash common.Hash) types.Receipts {
 	return receipts
 }
 
+// GetFileDatasByHash retrieves the fileDatas in a given block.
+func (bc *BlockChain) GetFileDatasByHash(hash common.Hash) []*types.FileData {
+	number := rawdb.ReadHeaderNumber(bc.db, hash)
+	if number == nil {
+		return nil
+	}
+	header := bc.GetHeader(hash, *number)
+	if header == nil {
+		return nil
+	}
+	fds := rawdb.ReadFileDatas(bc.db,hash,*number)
+	return fds
+}
+
+
 // GetUnclesInChain retrieves all the uncles from a given block backwards until
 // a specific distance is reached.
 func (bc *BlockChain) GetUnclesInChain(block *types.Block, length int) []*types.Header {

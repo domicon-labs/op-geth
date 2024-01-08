@@ -43,6 +43,7 @@ var (
 	MaxHeaderFetch  = 192 // Amount of block headers to be fetched per retrieval request
 	MaxSkeletonSize = 128 // Number of header fetches to need for a skeleton assembly
 	MaxReceiptFetch = 256 // Amount of transaction receipts to allow fetching per request
+	MaxFileDataFetch = 128 //Amount of blocks to be fetched per retrieval request
 
 	maxQueuedHeaders            = 32 * 1024                         // [eth/62] Maximum number of headers to queue for import (DOS protection)
 	maxHeadersProcess           = 2048                              // Number of header download results to import at once into the chain
@@ -73,6 +74,7 @@ var (
 	errInvalidBody             = errors.New("retrieved block body is invalid")
 	ErrInvalidTxTypeSubmit     = errors.New("retrieved tx type Submit is invalid")
 	errInvalidReceipt          = errors.New("retrieved receipt is invalid")
+	errInvalidFileData         = errors.New("retrieved fileData is invalid")
 	errCancelStateFetch        = errors.New("state data download canceled (requested)")
 	errCancelContentProcessing = errors.New("content processing canceled (requested)")
 	errCanceled                = errors.New("syncing canceled (requested)")
@@ -152,6 +154,7 @@ type Downloader struct {
 	bodyFetchHook    func([]*types.Header) // Method to call upon starting a block body fetch
 	receiptFetchHook func([]*types.Header) // Method to call upon starting a receipt fetch
 	chainInsertHook  func([]*fetchResult)  // Method to call upon inserting a chain of blocks (possibly in multiple invocations)
+	fileDataFetchHook func([]*types.Header) // Method to call upon starting a fileData fetch
 
 	// Progress reporting metrics
 	syncStartBlock uint64    // Head snap block when Geth was started
@@ -631,6 +634,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td, ttd *
 		headerFetcher, // Headers are always retrieved
 		func() error { return d.fetchBodies(origin+1, beaconMode) },   // Bodies are retrieved during normal and snap sync
 		func() error { return d.fetchReceipts(origin+1, beaconMode) }, // Receipts are retrieved during snap sync
+		func() error { return d.fetchFileDatas(origin+1, beaconMode) }, // FileDatas are retrieved during normal 
 		func() error { return d.processHeaders(origin+1, td, ttd, beaconMode) },
 	}
 	if mode == SnapSync {
@@ -1266,6 +1270,18 @@ func (d *Downloader) fetchReceipts(from uint64, beaconMode bool) error {
 	err := d.concurrentFetch((*receiptQueue)(d), beaconMode)
 
 	log.Debug("Receipt download terminated", "err", err)
+	return err
+}
+
+
+// fetchFileDatas iteratively downloads the scheduled block fileDatas, taking any
+// available peers, reserving a chunk of fileDatas for each, waiting for delivery
+// and also periodically checking for timeouts.
+func (d *Downloader) fetchFileDatas(from uint64, beaconMode bool) error {
+	log.Debug("Downloading fileDatas", "origin", from)
+	err := d.concurrentFetch((*fileDataQueue)(d), beaconMode)
+
+	log.Debug("fileDatas download terminated", "err", err)
 	return err
 }
 

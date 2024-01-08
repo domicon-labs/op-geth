@@ -97,9 +97,9 @@ type Peer struct {
 	txBroadcast chan []common.Hash // Channel used to queue transaction propagation requests
 	txAnnounce  chan []common.Hash // Channel used to queue transaction announcement requests
 
-	fdpool     	FileDataPool // fileData pool used by the broadcasters for liveness checks
-	knownFds    *knownCache          // Set of fileData hashes known to be known by this peer
-	fdBroadcast chan []common.Hash   // Channel used to queue fileData propagation requests
+	fdpool      FileDataPool       // fileData pool used by the broadcasters for liveness checks
+	knownFds    *knownCache        // Set of fileData hashes known to be known by this peer
+	fdBroadcast chan []common.Hash // Channel used to queue fileData propagation requests
 	fdAnnounce  chan []common.Hash // Channel used to queue fileData announcement requests
 
 	reqDispatch chan *request  // Dispatch channel to send requests and track then until fulfilment
@@ -126,7 +126,7 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool, fdp
 		txBroadcast:     make(chan []common.Hash),
 		txAnnounce:      make(chan []common.Hash),
 		fdBroadcast:     make(chan []common.Hash),
-		fdAnnounce: 	 make(chan []common.Hash),
+		fdAnnounce:      make(chan []common.Hash),
 		reqDispatch:     make(chan *request),
 		reqCancel:       make(chan *cancel),
 		resDispatch:     make(chan *response),
@@ -211,10 +211,9 @@ func (p *Peer) markTransaction(hash common.Hash) {
 
 // markFileData marks a fileData as known for the peer, ensuring that it
 // will never be propagated to this particular peer.
-func (p *Peer) markFileData(hash common.Hash){
+func (p *Peer) markFileData(hash common.Hash) {
 	p.knownFds.Add(hash)
 }
-
 
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
@@ -235,14 +234,13 @@ func (p *Peer) SendTransactions(txs types.Transactions) error {
 
 // SendFileDatas sends fileData to the peer and includes the hashes
 // in its fileData hash set for future reference.
-//
-func (p *Peer) SendFileDatas(fds []*types.FileData) error{
+func (p *Peer) SendFileDatas(fds []*types.FileData) error {
 	var txHash common.Hash
 	for _, fd := range fds {
 		txHash = fd.TxHash
 		p.knownFds.Add(fd.TxHash)
 	}
-	log.Info("SendFileDatas----","FileDataMsg",FileDataMsg,"fds length",len(fds),"peer id",p.ID(),"txHash",txHash.String())
+	log.Info("SendFileDatas----", "FileDataMsg", FileDataMsg, "fds length", len(fds), "peer id", p.ID(), "txHash", txHash.String())
 	return p2p.Send(p.rw, FileDataMsg, fds)
 }
 
@@ -281,7 +279,7 @@ func (p *Peer) AsyncSendFileData(hashes []common.Hash) {
 func (p *Peer) sendPooledFileDataHashes66(hashes []common.Hash) error {
 	// Mark all the fileDatas as known, but ensure we don't overflow our limits
 	p.knownFds.Add(hashes...)
-	log.Info("sendPooledFileDataHashes66---广播交易哈希","txHash",hashes[0].String())
+	log.Info("sendPooledFileDataHashes66---广播交易哈希", "txHash", hashes[0].String())
 	return p2p.Send(p.rw, NewPooledFileDataHashesMsg, NewPooledFileDataHashesPacket67(hashes))
 }
 
@@ -295,10 +293,9 @@ func (p *Peer) sendPooledFileDataHashes66(hashes []common.Hash) error {
 func (p *Peer) sendPooledFileDataHashes68(hashes []common.Hash, sizes []uint32) error {
 	// Mark all the fileDatas as known, but ensure we don't overflow our limits
 	p.knownFds.Add(hashes...)
-	log.Info("sendPooledFileDataHashes68---广播交易哈希","txHash",hashes[0].String())
+	log.Info("sendPooledFileDataHashes68---广播交易哈希", "txHash", hashes[0].String())
 	return p2p.Send(p.rw, NewPooledFileDataHashesMsg, NewPooledFileDataHashesPacket68{Sizes: sizes, Hashes: hashes})
 }
-
 
 // AsyncSendPooledFileDataHashes queues a list of fileDatas hashes to eventually
 // announce to a remote peer.  The number of pending sends are capped (new ones
@@ -369,7 +366,7 @@ func (p *Peer) ReplyPooledFileDatasRLP(id uint64, hashes []common.Hash, fds []rl
 	p.knownFds.Add(hashes...)
 	// Not packed into PooledFileDataResponse to avoid RLP decoding
 	return p2p.Send(p.rw, PooledFileDatasMsg, &PooledFileDataRLPPacket{
-		RequestId:                     id,
+		RequestId:                 id,
 		PooledFileDataRLPResponse: fds,
 	})
 }
@@ -447,6 +444,23 @@ func (p *Peer) ReplyReceiptsRLP(id uint64, receipts []rlp.RawValue) error {
 		ReceiptsRLPResponse: receipts,
 	})
 }
+
+func (p *Peer) ReplyFileDatasMarshal(id uint64, fileDatas []*BantchFileData) []error {
+	errs := make([]error, 0)	
+	for _,bfd := range fileDatas {
+			data,err := rlp.EncodeToBytes(bfd)
+			if err != nil {
+					log.Error("ReplyFileDatasMarshal---encode","err",err.Error())
+			}
+			err = p2p.Send(p.rw, ResFileDatasMsg, &FileDatasResponseRLPPacket{
+				RequestId:           id,
+				FileDatasResponse:   data,
+			}) 
+			errs = append(errs, err)
+	}
+	return errs
+}
+
 
 // RequestOneHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
@@ -584,19 +598,38 @@ func (p *Peer) RequestTxs(hashes []common.Hash) error {
 	})
 }
 
-
 // RequestFileDatas fetches a batch of fileDatas from a remote node.
 func (p *Peer) RequestFileDatas(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of fileDatas", "count", len(hashes))
 	id := rand.Uint64()
-	log.Info("RequestFileDatas----","hash",hashes[0].String())
+	log.Info("RequestFileDatas----", "hash", hashes[0].String())
 	requestTracker.Track(p.id, p.version, GetPooledFileDatasMsg, PooledFileDatasMsg, id)
 	return p2p.Send(p.rw, GetPooledFileDatasMsg, &GetPooledFileDataPacket{
-		RequestId:                    id,
+		RequestId:                 id,
 		GetPooledFileDatasRequest: hashes,
 	})
 }
 
+// StartRequestFileDatas implements downloader.Peer.
+func (p *Peer) StartRequestFileDatas(hashes []common.Hash,sink chan *Response) (*Request, error) {
+	p.Log().Debug("Fetching batch of fileData", "count", len(hashes))
+	id := rand.Uint64()
+
+	req := &Request{
+		id:   id,
+		sink: sink,
+		code: ReqFileDatasMsg,
+		want: ResFileDatasMsg,
+		data: &GetFileDatasPacket{
+			RequestId:          id,
+			GetFileDatasRequest: hashes,
+		},
+	}
+	if err := p.dispatchRequest(req); err != nil {
+		return nil, err
+	}
+	return req, nil
+}
 
 // knownCache is a cache for known hashes.
 type knownCache struct {

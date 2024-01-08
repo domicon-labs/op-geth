@@ -617,6 +617,10 @@ func (b testBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	return true, nil
 }
 
+func (b testBackend)  DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) ([]bool, error) {
+	return []bool{true}, nil
+}
+
 // ChangeCurrentState implements Backend.
 func (b testBackend) ChangeCurrentState(state int, number rpc.BlockNumber) bool {
 	panic("unimplemented")

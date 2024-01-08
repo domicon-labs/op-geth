@@ -61,7 +61,9 @@ type jsonWriter interface {
 
 
 type TxHashes struct{
-	TxHashes       []common.Hash      `json:"txhashes"`
+	TxHashes       []common.Hash      `json:"txHashes"`
+	BlockHash 		  common.Hash				`json:"blockHash"`
+	BlockNumber     BlockNumber				`json:"blockNumber"`
 }
 
 func (ts *TxHashes) String() string {
@@ -164,10 +166,6 @@ func (bn BlockNumber) String() string {
 		return hexutil.Uint64(bn).String()
 	}
 }
-
-
-
-
 
 type BlockNumberOrHash struct {
 	BlockNumber      *BlockNumber `json:"blockNumber,omitempty"`

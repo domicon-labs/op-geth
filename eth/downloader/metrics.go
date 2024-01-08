@@ -38,5 +38,10 @@ var (
 	receiptDropMeter    = metrics.NewRegisteredMeter("eth/downloader/receipts/drop", nil)
 	receiptTimeoutMeter = metrics.NewRegisteredMeter("eth/downloader/receipts/timeout", nil)
 
+	fileDataInMeter     = metrics.NewRegisteredMeter("eth/downloader/fileData/in", nil)
+	fileDataReqTimer     = metrics.NewRegisteredTimer("eth/downloader/fileData/req", nil)
+	fileDataDropMeter    = metrics.NewRegisteredMeter("eth/downloader/fileData/drop", nil)
+	fileDataTimeoutMeter = metrics.NewRegisteredMeter("eth/downloader/fileData/timeout", nil)
+
 	throttleCounter = metrics.NewRegisteredCounter("eth/downloader/throttle", nil)
 )

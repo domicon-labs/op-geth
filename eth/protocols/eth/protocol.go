@@ -63,7 +63,9 @@ const (
 	PooledTransactionsMsg         = 0x0a
 	GetReceiptsMsg                = 0x0f
 	ReceiptsMsg                   = 0x10
-	FileDataMsg          		  = 0x0c
+	FileDataMsg          		  		= 0x0c
+	ReqFileDatasMsg								= 0x12
+	ResFileDatasMsg               = 0x11
 	PooledFileDatasMsg            = 0x0b
 	GetPooledFileDatasMsg         = 0x0d
 	NewPooledFileDataHashesMsg    = 0x0e
@@ -332,6 +334,23 @@ type FileDataPacket []*types.FileData
 // GetPooledFileDatasRequest represents a fileData query.
 type GetPooledFileDatasRequest []common.Hash
 
+// GetFileDatasRequest represents a block fileDatas query.
+type GetFileDatasRequest []common.Hash
+
+// GetFileDatasPacket represents a block fileDatas query with request ID wrapping.
+type GetFileDatasPacket struct {
+	RequestId uint64
+	GetFileDatasRequest
+}
+
+// FileDatasResponse 
+type FileDatasResponse []byte
+
+type FileDatasResponseRLPPacket struct {
+	RequestId uint64
+	FileDatasResponse
+}
+
 // GetPooledFileDataPacket represents a fileData query with request ID wrapping.
 type GetPooledFileDataPacket struct {
 	RequestId uint64
@@ -422,3 +441,10 @@ func (*GetPooledFileDatasRequest) Kind() byte   { return PooledFileDatasMsg }
 
 func (*PooledFileDataResponse) Name() string { return "PooledFileDataResponse" }
 func (*PooledFileDataResponse) Kind() byte 	 { return PooledFileDatasMsg }
+
+func (*GetFileDatasRequest) Name() string { return "ReqFileDatasMsg" }
+func (*GetFileDatasRequest) Kind() byte		{ return ReqFileDatasMsg }
+
+func (*FileDatasResponse) Name() string { return "ResFileDatasMsg" }
+func (*FileDatasResponse) Kind() byte   { return ResFileDatasMsg } 
+

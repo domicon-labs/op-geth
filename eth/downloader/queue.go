@@ -147,7 +147,10 @@ type queue struct {
 	receiptPendPool  map[string]*fetchRequest           // Currently pending receipt retrieval operations
 	receiptWakeCh    chan bool                          // Channel to notify when receipt fetcher of new tasks
 
-	//fileDataTaskPool  
+	fileDataTaskPool  map[common.Hash]*types.Header 
+	fileDataTaskQueue *prque.Prque[int64, *types.Header]
+	fileDataPendPool  	map[string]*fetchRequest           
+	fileDataWakeCh    chan bool 
 
 
 	resultCache *resultStore       // Downloaded but not yet delivered fetch results
@@ -169,6 +172,8 @@ func newQueue(blockCacheLimit int, thresholdInitialSize int) *queue {
 		blockWakeCh:      make(chan bool, 1),
 		receiptTaskQueue: prque.New[int64, *types.Header](nil),
 		receiptWakeCh:    make(chan bool, 1),
+		fileDataTaskQueue: prque.New[int64, *types.Header](nil),
+		fileDataWakeCh:   make(chan bool),
 		active:           sync.NewCond(lock),
 		lock:             lock,
 	}
@@ -194,6 +199,10 @@ func (q *queue) Reset(blockCacheLimit int, thresholdInitialSize int) {
 	q.receiptTaskPool = make(map[common.Hash]*types.Header)
 	q.receiptTaskQueue.Reset()
 	q.receiptPendPool = make(map[string]*fetchRequest)
+
+	q.fileDataTaskPool = make(map[common.Hash]*types.Header)
+	q.fileDataTaskQueue.Reset()
+	q.fileDataPendPool = make(map[string]*fetchRequest)
 
 	q.resultCache = newResultStore(blockCacheLimit)
 	q.resultCache.SetThrottleThreshold(uint64(thresholdInitialSize))
@@ -232,6 +241,14 @@ func (q *queue) PendingReceipts() int {
 	return q.receiptTaskQueue.Size()
 }
 
+// PendingFileDatas retrieves the number of fileData pending for retrieval.
+func (q *queue) PendingFileDatas() int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return q.fileDataTaskQueue.Size()
+}
+
 // InFlightBlocks retrieves whether there are block fetch requests currently in
 // flight.
 func (q *queue) InFlightBlocks() bool {
@@ -250,13 +267,23 @@ func (q *queue) InFlightReceipts() bool {
 	return len(q.receiptPendPool) > 0
 }
 
+// InFlightFileDatas retrieves whether there are fileData fetch requests currently
+// in flight.
+func (q *queue) InFlightFileDatas() bool {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return len(q.fileDataPendPool) > 0
+}
+
+
 // Idle returns if the queue is fully idle or has some data still inside.
 func (q *queue) Idle() bool {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	queued := q.blockTaskQueue.Size() + q.receiptTaskQueue.Size()
-	pending := len(q.blockPendPool) + len(q.receiptPendPool)
+	queued := q.blockTaskQueue.Size() + q.receiptTaskQueue.Size() + q.fileDataTaskQueue.Size()
+	pending := len(q.blockPendPool) + len(q.receiptPendPool) + len(q.fileDataPendPool)
 
 	return (queued + pending) == 0
 }
@@ -307,6 +334,9 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
+	timeNow := time.Now()
+	twoDaysAgo := timeNow.AddDate(0, 0, -3)
+
 	// Insert all the headers prioritised by the contained block number
 	inserts := make([]*types.Header, 0, len(headers))
 	for i, header := range headers {
@@ -338,6 +368,19 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 				q.receiptTaskQueue.Push(header, -int64(header.Number.Uint64()))
 			}
 		}
+
+		headerTime := time.Unix(int64(header.Time), 0).UTC().Local()
+		// TODO full fileData sync should added
+		if headerTime.After(twoDaysAgo) {
+			// Queue for fileData retrieval
+			if _,ok := q.fileDataTaskPool[hash]; ok {
+				log.Warn("Header already scheduled for fileData fetch","number",header.Number, "hash", hash)
+			} else {
+				q.fileDataTaskPool[hash] = header
+				q.fileDataTaskQueue.Push(header,-int64(header.Number.Uint64()))
+			}
+		}
+
 		inserts = append(inserts, header)
 		q.headerHead = hash
 		from++
@@ -401,7 +444,7 @@ func (q *queue) Results(block bool) []*fetchResult {
 	throttleThreshold = q.resultCache.SetThrottleThreshold(throttleThreshold)
 
 	// With results removed from the cache, wake throttled fetchers
-	for _, ch := range []chan bool{q.blockWakeCh, q.receiptWakeCh} {
+	for _, ch := range []chan bool{q.blockWakeCh, q.receiptWakeCh, q.fileDataWakeCh} {
 		select {
 		case ch <- true:
 		default:
@@ -429,6 +472,7 @@ func (q *queue) stats() []interface{} {
 	return []interface{}{
 		"receiptTasks", q.receiptTaskQueue.Size(),
 		"blockTasks", q.blockTaskQueue.Size(),
+		"fileDataTasks", q.fileDataTaskQueue.Size(),
 		"itemSize", q.resultSize,
 	}
 }
@@ -492,6 +536,17 @@ func (q *queue) ReserveReceipts(p *peerConnection, count int) (*fetchRequest, bo
 
 	return q.reserveHeaders(p, count, q.receiptTaskPool, q.receiptTaskQueue, q.receiptPendPool, receiptType)
 }
+
+// ReserveFileDatas reserves a set of fileData fetches for the given peer, skipping
+// any previously failed downloads. Beside the next batch of needed fetches, it
+// also returns a flag whether empty fileData were queued requiring importing.
+func (q *queue) ReserveFileDatas(p *peerConnection, count int) (*fetchRequest, bool, bool) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return q.reserveHeaders(p, count, q.fileDataTaskPool, q.fileDataTaskQueue, q.fileDataPendPool,fileDataType)
+}
+
 
 // reserveHeaders reserves a set of data download operations for a given peer,
 // skipping any previously failed ones. This method is a generic version used
@@ -615,6 +670,14 @@ func (q *queue) Revoke(peerID string) {
 		}
 		delete(q.receiptPendPool, peerID)
 	}
+
+	if requset,ok := q.fileDataPendPool[peerID]; ok {
+		for _, header := range requset.Headers {
+			q.fileDataTaskQueue.Push(header,-int64(header.Number.Uint64()))
+		}
+		delete(q.fileDataPendPool, peerID)
+	}
+
 }
 
 // ExpireHeaders cancels a request that timed out and moves the pending fetch
@@ -645,6 +708,16 @@ func (q *queue) ExpireReceipts(peer string) int {
 
 	receiptTimeoutMeter.Mark(1)
 	return q.expire(peer, q.receiptPendPool, q.receiptTaskQueue)
+}
+
+// ExpireFileDatas checks for in flight fileData requests that exceeded a timeout
+// allowance, canceling them and returning the responsible peers for penalisation.
+func (q *queue) ExpireFileDatas(peer string) int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	fileDataTimeoutMeter.Mark(1)
+	return q.expire(peer, q.fileDataPendPool, q.fileDataTaskQueue)
 }
 
 // expire is the generic check that moves a specific expired task from a pending
@@ -794,9 +867,6 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction, txListH
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	timeNow := time.Now()
-	twoDaysAgo := timeNow.AddDate(0, 0, -3)
-	
 	validate := func(index int, header *types.Header) error {
 		if txListHashes[index] != header.TxHash {
 			return errInvalidBody
@@ -836,17 +906,10 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction, txListH
 				if tx.BlobTxSidecar() != nil {
 					return errInvalidBody
 				}
-			}else if (int(tx.Type()) == types.SubmitTxType){
-				if len(tx.SourceHash()) == 0{
-						return ErrInvalidTxTypeSubmit
-				}
-
-				//TODO By echo
-				if tx.Time().After(twoDaysAgo) {
-					
-				}
-
 			}
+			// else if tx.Type() == uint8(types.SubmitTxType) {
+
+			// }
 		}
 		if header.BlobGasUsed != nil {
 			if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want { // div because the header is surely good vs the body might be bloated
@@ -889,6 +952,32 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt, recei
 	}
 	return q.deliver(id, q.receiptTaskPool, q.receiptTaskQueue, q.receiptPendPool,
 		receiptReqTimer, receiptInMeter, receiptDropMeter, len(receiptList), validate, reconstruct)
+}
+
+// DeliverFileDatas injects a fileData retrieval response into the results queue.
+// The method returns the number of fileDatas accepted from the delivery
+// and also wakes any threads waiting for data delivery.
+func (q *queue) DeliverFileDatas(id string,fileDataList []*types.FileData,fileDataListHashes []common.Hash) (int, error) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	validate := func (index int, header *types.Header) error {
+		if len(fileDataList) != len(fileDataListHashes) {
+			return errInvalidFileData
+		}
+
+		if fileDataList[index].TxHash != fileDataListHashes[index] {
+			return errInvalidFileData
+		}
+		return nil
+	}
+
+	reconstruct := func (index int, result *fetchResult)  {
+			result.FileDatas = fileDataList
+			result.SetFileDatasDone()
+	}
+	return q.deliver(id, q.fileDataTaskPool, q.fileDataTaskQueue, q.fileDataPendPool,
+			fileDataReqTimer, fileDataInMeter, fileDataDropMeter, len(fileDataList),validate, reconstruct)
 }
 
 // deliver injects a data retrieval response into the results queue.

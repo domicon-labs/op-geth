@@ -18,6 +18,7 @@ package eth
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -529,6 +530,7 @@ func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	return backend.Handle(peer, &fds)
 }
 
+
 func handleGetPooledFileDatas(backend Backend,msg Decoder,peer *Peer) error {
 	var query GetPooledFileDataPacket
 	if err := msg.Decode(&query); err != nil {
@@ -602,13 +604,124 @@ func handlePooledFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	}
 
 	for i, fd := range fds.PooledFileDataResponse {
-		// Validate and mark the remote fileData
-		if fd == nil {
-			return fmt.Errorf("%w: transaction %d is nil", errDecode, i)
-		}
-		log.Info("handlePooledFileDatas----","txHash",fd.TxHash.String())
-		peer.markFileData(fd.TxHash)
+			// Validate and mark the remote fileData
+			if fd == nil {
+				return fmt.Errorf("%w: fileData %d is nil", errDecode, i)
+			}
+			log.Info("handlePooledFileDatas----","txHash",fd.TxHash.String())
+			peer.markFileData(fd.TxHash)
 	}
 	requestTracker.Fulfil(peer.id, peer.version, PooledFileDatasMsg, fds.RequestId)
 	return backend.Handle(peer, &fds.PooledFileDataResponse)
 }
+
+func handleResFileDatas(backend Backend, msg Decoder, peer *Peer) error {
+	// A batch of fileDatas arrived to one of our previous requests
+	res := new(FileDatasResponseRLPPacket)
+	if err := msg.Decode(res); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}
+	
+	metaData := func () interface{} {
+		var btfd BantchFileData
+	  err := rlp.DecodeBytes(res.FileDatasResponse,&btfd)
+		if err != nil {
+			log.Error("handleResFileDatas----decode BantchFileData err","err",err.Error())
+		}
+		hashes := make([]common.Hash, len(btfd.FileDatas))
+		for inde,data := range btfd.FileDatas {
+			var fd types.FileData 
+			rlp.DecodeBytes(data,&fd)
+			hashes[inde] = fd.TxHash
+		}
+		return hashes
+	}
+	
+	return peer.dispatchResponse(&Response{
+		id:   res.RequestId,
+		code: ResFileDatasMsg,
+		Res:  &res.FileDatasResponse,
+	}, metaData)
+}
+
+func handleReqFileDatas(backend Backend, msg Decoder, peer *Peer) error {
+	// Decode the block fileDatas retrieval message
+	var query GetFileDatasPacket
+	if err := msg.Decode(&query); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}
+	response := ServiceGetFileDatasQuery(backend.Chain(), query.GetFileDatasRequest)
+	errs := peer.ReplyFileDatasMarshal(query.RequestId, response)
+	if len(errs) != 0 {
+		return errors.New("send Requested FileDatas failed")
+	}else{
+		return nil
+	}
+}
+
+type BantchFileData struct {
+		HeaderHash    common.Hash 	`json:"headerhash"`
+		Cap						uint64				`json:"cap"`
+		Length        uint64				`json:"length"`
+		FileDatas     [][]byte			`json:"filedatas"`
+}
+
+// ServiceGetFileDatasQuery assembles the response to a fileData query. It is
+// exposed to allow external packages to test protocol behavior.
+func ServiceGetFileDatasQuery(chain *core.BlockChain, query GetFileDatasRequest) []*BantchFileData {
+	// Gather state data until the fetch or network limits is reached
+	var (
+		bytes    int
+	)
+
+	var batch 	uint64
+	var cap 		uint64
+
+	resultList := make([]*BantchFileData, 0)
+
+	for _, hash := range query {
+		// Retrieve the requested block's fileData
+		results := chain.GetFileDatasByHash(hash)
+		if results == nil {
+			if header := chain.GetHeaderByHash(hash); header == nil{
+				continue
+			}
+		}
+
+		// how many batch of fileDatas should send by one header hash
+		cap = uint64(len(results))
+		batchFileDatas := make([][][]byte, 0)
+		for index,fd := range results{
+				encoded,err := rlp.EncodeToBytes(fd)
+				if err != nil {
+					log.Error("Failed to encode fileData", "err", err)
+				}else {
+					bytes += len(encoded)
+					if bytes >= fileDataSoftResponseLimit || len(batchFileDatas[batch]) >= maxFileDatasServe {
+						batch ++
+					}
+
+					list := batchFileDatas[index]
+					if list == nil {
+						list = make([][]byte, 0)
+					}else {
+						list = append(list, encoded)
+					}
+					batchFileDatas[index] = list
+				}
+		}
+		
+		//
+		for _,datas := range batchFileDatas {
+				btFD := &BantchFileData{
+					HeaderHash: hash,
+					Cap: cap,
+					Length: uint64(len(datas)),
+					FileDatas: datas,
+				}
+				resultList = append(resultList, btFD)
+		}
+		
+	}
+	return resultList
+} 
