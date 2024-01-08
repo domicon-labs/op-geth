@@ -22,6 +22,10 @@ var (
 	// ErrAlreadyKnown is returned if the fileData is already contained
 	// within the pool.
 	ErrAlreadyKnown = errors.New("already known")
+
+	// ErrFdPoolOverflow is returned if the fileData pool is full and can't accept
+	// another remote fileData.
+	ErrFdPoolOverflow = errors.New("fileData pool is full")
 )
 
 var (
@@ -31,6 +35,8 @@ var (
 var (
 	knownFdMeter       = metrics.NewRegisteredMeter("fileData/known", nil)
 	invalidFdMeter     = metrics.NewRegisteredMeter("fileData/invalid", nil)
+
+	slotsGauge   = metrics.NewRegisteredGauge("fileData/slots", nil)
 )
 
 var (
@@ -55,6 +61,7 @@ type Config struct {
 	// When true, all fileDatas loaded from the journal are treated as remote.
 	JournalRemote bool
 	Lifetime      time.Duration
+	GlobalSlots   uint64 // Maximum number of executable fileData slots for all accounts
 }
 
 
@@ -64,6 +71,7 @@ var DefaultConfig = Config{
 	Lifetime: 3 * 24 * time.Hour,
 	Rejournal: time.Hour,
 	JournalRemote: true,
+	GlobalSlots: 4096,
 }
 
 type BlockChain interface {
@@ -533,7 +541,7 @@ func (fp *FilePool) Get(hash common.Hash) (*types.FileData,error){
 }
 
 
-// get returns a transaction if it is contained in the pool and nil otherwise.
+// get returns a fileData if it is contained in the pool and nil otherwise.
 func (fp *FilePool) get(hash common.Hash) *types.FileData {
 	return fp.all.Get(hash)
 }
@@ -576,7 +584,7 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 		news = make([]*types.FileData, 0, len(fds))
 	)
 	for i, fd := range fds {
-		// If the transaction is known, pre-set the error slot
+		// If the fileData is known, pre-set the error slot
 		if fp.all.Get(fd.TxHash) != nil {
 			errs[i] = ErrAlreadyKnown
 			knownFdMeter.Mark(1)
@@ -586,24 +594,20 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 		txHash := fd.TxHash.String()
 
 		log.Info("FilePool----Add","txHash",txHash)
-		// Exclude transactions with basic errors, e.g invalid signatures and
-		// insufficient intrinsic gas as soon as possible and cache senders
-		// in transactions before obtaining lock
+		// Exclude fileDatas with basic errors, e.g invalid signatures
 		if err := fp.validateFileDataSignature(fd, local); err != nil {
 			errs[i] = err
 			invalidFdMeter.Mark(1)
 			continue
 		}
-		// Accumulate all unknown transactions for deeper processing
 		news = append(news, fd)
 	}
 	if len(news) == 0 {
 		return errs
 	}
-
-	// Process all the new transaction and merge any errors into the original slice
+	
 	fp.mu.Lock()
-	newErrs := fp.addTxsLocked(news, local)
+	newErrs := fp.addFdsLocked(news, local)
 	fp.mu.Unlock()
 
 	var nilSlot = 0
@@ -625,9 +629,9 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 	return errs
 }
 
-// addTxsLocked attempts to queue a batch of transactions if they are valid.
-// The transaction pool lock must be held.
-func (fp *FilePool) addTxsLocked(txs []*types.FileData, local bool) []error {
+// addFdsLocked attempts to queue a batch of FileDatas if they are valid.
+// The fileData pool lock must be held.
+func (fp *FilePool) addFdsLocked(txs []*types.FileData, local bool) []error {
 	errs := make([]error, len(txs))
 	for i, tx := range txs {
 		_, err := fp.add(tx, local)
@@ -637,15 +641,10 @@ func (fp *FilePool) addTxsLocked(txs []*types.FileData, local bool) []error {
 	return errs
 }
 
-// add validates a transaction and inserts it into the non-executable queue for later
-// pending promotion and execution. If the transaction is a replacement for an already
-// pending or queued one, it overwrites the previous transaction if its price is higher.
-//
-// If a newly added transaction is marked as local, its sending account will be
-// added to the allowlist, preventing any associated transaction from being dropped
-// out of the pool due to pricing constraints.
+// add validates a fileData and inserts it into the non-executable queue for later
+// saved. 
 func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err error) {
-	// If the transaction is already known, discard it
+	// If the fileData is already known, discard it
 	hash := fd.TxHash
 	if fp.all.Get(hash) != nil {
 		log.Trace("Discarding already known transaction", "hash", hash)
@@ -653,7 +652,12 @@ func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err erro
 		return false, ErrAlreadyKnown
 	}
 
-	fp.journalTx(hash, fd)
+	//
+	if uint64(fp.all.Slots()+1) > fp.config.GlobalSlots {
+		return false,ErrFdPoolOverflow
+	}
+
+	fp.journalFd(hash, fd)
 	fp.all.Add(fd)
 	fp.beats[hash] = time.Now()
 
@@ -661,9 +665,9 @@ func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err erro
 	return replaced, nil
 }
 
-// journalTx adds the specified transaction to the local disk journal if it is
+// journalFd adds the specified fileData to the local disk journal if it is
 // deemed to have been sent from a local account.
-func (fp *FilePool) journalTx(txHash common.Hash, fd *types.FileData) {
+func (fp *FilePool) journalFd(txHash common.Hash, fd *types.FileData) {
 	// Only journal if it's enabled and the transaction is local
 	_, flag := fp.collector[txHash]
 	if fp.journal == nil || (!fp.config.JournalRemote && !flag) {
@@ -674,7 +678,7 @@ func (fp *FilePool) journalTx(txHash common.Hash, fd *types.FileData) {
 	}
 }
 
-// validateTxBasics checks whether a transaction is valid according to the consensus
+// validateFileDataSignature checks whether a fileData is valid according to the consensus
 // rules, but does not check state-dependent validation such as sufficient balance.
 // This check is meant as an early check which only needs to be performed once,
 // and does not require the pool mutex to be held.
@@ -686,7 +690,7 @@ func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) er
 	return nil
 }
 
-// Close terminates the transaction pool.
+// Close terminates the fileData pool.
 func (fp *FilePool) Close() error {
 	// Terminate the pool reorger and return
 	close(fp.reorgShutdownCh)
@@ -702,6 +706,7 @@ func (fp *FilePool) Close() error {
 }
 
 type lookup struct {
+	slots   int
 	lock      sync.RWMutex
 	collector map[common.Hash]*types.FileData
 }
@@ -726,7 +731,7 @@ func (t *lookup) Range(f func(hash common.Hash, fd *types.FileData) bool) {
 	}
 }
 
-// Get returns a transaction if it exists in the lookup, or nil if not found.
+// Get returns a fileData if it exists in the lookup, or nil if not found.
 func (t *lookup) Get(hash common.Hash) *types.FileData {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
@@ -745,22 +750,33 @@ func (t *lookup) Count() int {
 	return len(t.collector)
 }
 
-// Add adds a transaction to the lookup.
+// Add adds a fileData to the lookup.
 func (t *lookup) Add(fd *types.FileData) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
+	t.slots += 1
+	slotsGauge.Update(int64(t.slots))
+
 	t.collector[fd.TxHash] = fd
 }
+
+// Slots returns the current number of slots used in the lookup.
+func (t *lookup) Slots() int {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return t.slots
+}
+
 
 // Remove removes a transaction from the lookup.
 func (t *lookup) Remove(hash common.Hash) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
+	t.slots -= 1
+	slotsGauge.Update(int64(t.slots))
 	delete(t.collector, hash)
 }
 
-// type fppoolResetRequest struct {
-// 	oldHead, newHead *types.Header
-// }

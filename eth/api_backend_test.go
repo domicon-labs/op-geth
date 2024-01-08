@@ -131,3 +131,17 @@ func TestDiskSaveFileDataWithHashes(t *testing.T) {
 	}
 	log.Info("test-----","fds",res)
 }
+
+func TestDiskSaveFileDatas(t *testing.T) {
+
+	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	if err != nil {
+		println("DialContext-----err",err.Error())
+	}
+
+	res,err := client.DiskSaveFileDataWithHashes(context.TODO(),rpc.TxHashes{TxHashes: []common.Hash{common.BytesToHash([]byte("2"))},BlockHash: common.BytesToHash([]byte("3")), BlockNumber: rpc.BlockNumber(10)})
+	if err != nil {
+		println("DialContext----err",err.Error())
+	}
+	log.Info("test-------","res",res)
+}
