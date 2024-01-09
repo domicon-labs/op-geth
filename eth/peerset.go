@@ -210,7 +210,18 @@ func (ps *peerSet) peerWithOutFileData(hash common.Hash) []*ethPeer {
 		}
 	}
 	return list
+}
 
+// peersToGetFileData retrieves a list of peers.
+func (ps *peerSet) peersToGetFileData() []*ethPeer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*ethPeer, 0, len(ps.peers))
+	for _, p := range ps.peers  {
+		list = append(list, p)
+	}
+	return list
 }
 
 

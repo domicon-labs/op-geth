@@ -90,10 +90,10 @@ type BlockChain interface {
 }
 
 type DiskDetail struct {
-	TxHash        common.Hash 			`json:"TxHash"`
+	TxHash        common.Hash 				`json:"TxHash"`
 	State         DISK_FILEDATA_STATE	`json:"State"`
-	TimeRecord    time.Time				`json:"TimeRecord"`
-	Data          types.FileData		`json:"Data"`
+	TimeRecord    time.Time						`json:"TimeRecord"`
+	Data          types.FileData			`json:"Data"`
 }
 
 type DiskCache struct {
@@ -111,6 +111,7 @@ type FilePool struct {
 	chainconfig     *params.ChainConfig
 	chain           BlockChain
 	fileDataFeed    event.Feed
+	fileDataHashFeed event.Feed
 	mu              sync.RWMutex
 	currentHead     atomic.Pointer[types.Header] // Current head of the blockchain
 	currentState    *state.StateDB               // Current state in the blockchain head
@@ -119,6 +120,7 @@ type FilePool struct {
 	subs            event.SubscriptionScope // Subscription scope to unsubscribe all on shutdown
 	all             *lookup
 	diskCache				map[common.Hash]DiskDetail 
+//	diskCache1      *lru.Cache[common.Hash,DiskDetail]		
 	collector       map[common.Hash]*types.FileData
 	beats           map[common.Hash]time.Time // Last heartbeat from each known account
 	reorgDoneCh     chan chan struct{}
@@ -135,6 +137,7 @@ func New(config Config, chain BlockChain) *FilePool {
 		signer:          types.LatestSigner(chain.Config()),
 		all:             newLookup(),
 		diskCache:			 make(map[common.Hash]DiskDetail),
+		//diskCache1:      lru.NewCache[common.Hash,DiskDetail](10000000),
 		collector:       make(map[common.Hash]*types.FileData),
 		beats:           make(map[common.Hash]time.Time),
 		reorgDoneCh:     make(chan chan struct{}),
@@ -438,6 +441,11 @@ func (fp *FilePool) SubscribenFileDatas(ch chan<- core.NewFileDataEvent) event.S
 	return fp.fileDataFeed.Subscribe(ch)
 }
 
+// SubscribenFileDatasHash registers a subscription for get unknow fileData by txHash.
+func (fp *FilePool) SubscribenFileDatasHash(ch chan<- core.FileDataHashEvent) event.Subscription {
+	return fp.fileDataHashFeed.Subscribe(ch)
+}
+
 func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	fileData, ok := fp.all.collector[hash]
 	if !ok {
@@ -447,7 +455,10 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	diskDb := fp.currentState.Database().DiskDB()
 
 	fp.diskCache[hash] = DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
-
+	// if !fp.diskCache1.Contains(hash) {
+	// 	fp.diskCache1.Add(hash,DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData})
+	// }
+	
 	cache := NewDiskCache()
 	for hash,info := range fp.diskCache{
 		cache.Cache[hash]= info
@@ -513,13 +524,26 @@ func (fp *FilePool) Has(hash common.Hash) bool{
 // Get retrieves the fileData from local fileDataPool with given
 // tx hash.
 func (fp *FilePool) Get(hash common.Hash) (*types.FileData,error){
+	var getTimes uint64
+Lable:
 	fd := fp.get(hash)
 	if fd == nil {
 		diskDb := fp.currentState.Database().DiskDB()
 		data,err := diskDb.Get(HashListKey)
-		if err != nil {
-			return nil,err
+		if err != nil || len(data) == 0{
+				log.Info("本地节点没有从需要从远端要--------","hash",hash.String())
+				if getTimes < 1 {
+					fp.fileDataHashFeed.Send(core.FileDataHashEvent{Hashes: []common.Hash{hash}})
+					log.Info("本地节点没有从需要从远端要---进来了么")
+				}
+				time.Sleep(200 * time.Millisecond)
+				getTimes ++
+				if getTimes <= 1 {
+					goto Lable
+				}
+				return nil,err
 		}
+
 		if len(data) > 0 {
 			var cache DiskCache
 			err = json.Unmarshal(data,&cache)
@@ -531,9 +555,7 @@ func (fp *FilePool) Get(hash common.Hash) (*types.FileData,error){
 				return nil,errors.New("fileData already del")
 			}
 			return &val.Data,nil
-		}else {
-			return nil,err
-		}	
+		}
 	}
 	return fd,nil
 }
@@ -629,10 +651,10 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 
 // addFdsLocked attempts to queue a batch of FileDatas if they are valid.
 // The fileData pool lock must be held.
-func (fp *FilePool) addFdsLocked(txs []*types.FileData, local bool) []error {
-	errs := make([]error, len(txs))
-	for i, tx := range txs {
-		_, err := fp.add(tx, local)
+func (fp *FilePool) addFdsLocked(fds []*types.FileData, local bool) []error {
+	errs := make([]error, len(fds))
+	for i, fd := range fds {
+		_, err := fp.add(fd, local)
 		errs[i] = err
 	}
 
@@ -755,7 +777,7 @@ func (t *lookup) Add(fd *types.FileData) {
 
 	t.slots += 1
 	slotsGauge.Update(int64(t.slots))
-
+	log.Info("Add-----加进来了")
 	t.collector[fd.TxHash] = fd
 }
 

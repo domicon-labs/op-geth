@@ -49,7 +49,7 @@ const (
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 
-	fdChanSize = 4096	
+	fdChanSize = 60	
 	// txMaxBroadcastSize is the max size of a transaction that will be broadcasted.
 	// All transactions with a higher size will be announced and need to be fetched
 	// by the peer.
@@ -100,6 +100,9 @@ type fileDataPool interface {
 	// can decide whether to receive notifications only for newly seen fileDatas
 	// or also for reorged out ones.
 	SubscribenFileDatas(ch chan<- core.NewFileDataEvent) event.Subscription
+
+	// SubscribenFileDatasHash subscribes to get fileData Hash  events.
+	SubscribenFileDatasHash(ch chan<- core.FileDataHashEvent) event.Subscription
 }
 
 
@@ -146,7 +149,9 @@ type handler struct {
 	txsCh         chan core.NewTxsEvent
 	txsSub        event.Subscription
 	fdsCh         chan core.NewFileDataEvent
+	fdHashCh      chan core.FileDataHashEvent
 	fdsSub        event.Subscription
+	fdHashSub     event.Subscription
 	minedBlockSub *event.TypeMuxSubscription
 
 	requiredBlocks map[uint64]common.Hash
@@ -567,10 +572,13 @@ func (h *handler) Start(maxPeers int) {
 	go h.txBroadcastLoop()
 
 	// broadcast fileDatas  (only new ones, not resurrected ones)
-	h.wg.Add(1)
+	h.wg.Add(2)
 	h.fdsCh = make(chan core.NewFileDataEvent, fdChanSize)
+	h.fdHashCh = make(chan core.FileDataHashEvent, fdChanSize)
 	h.fdsSub = h.fileDataPool.SubscribenFileDatas(h.fdsCh)
+	h.fdHashSub = h.fileDataPool.SubscribenFileDatasHash(h.fdHashCh)
 	go h.fdBroadcastLoop()
+	go h.fdGetFileDatasLoop()
 
 	// broadcast mined blocks
 	h.wg.Add(1)
@@ -588,7 +596,8 @@ func (h *handler) Start(maxPeers int) {
 
 func (h *handler) Stop() {
 	h.txsSub.Unsubscribe()        // quits txBroadcastLoop
-	h.fdsSub.Unsubscribe()		  // quits fileDataBroadcastLoop
+	h.fdsSub.Unsubscribe()				// quits fileDataBroadcastLoop
+	h.fdHashSub.Unsubscribe()	  	// quits getFileDataHashLoop
 	h.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 
 	// Quit chainSync and txsync64.
@@ -655,29 +664,29 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 		directCount int // Number of fileData sent directly to peers (duplicates included)
 		directPeers int // Number of peers that were sent fileData directly
 		
-		annCount    int // Number of fileDatas announced across all peers (duplicates included)
-		annPeers    int // Number of peers announced about fileDatas
+		// annCount    int // Number of fileDatas announced across all peers (duplicates included)
+		// annPeers    int // Number of peers announced about fileDatas
 
 		fdset = make(map[*ethPeer][]common.Hash)
-		annos = make(map[*ethPeer][]common.Hash) // Set peer->hash to announce
+		//annos = make(map[*ethPeer][]common.Hash) // Set peer->hash to announce
 	)
 
 	for _,fd := range fds {
 		log.Info("BroadcastFileData---","需要广播的fileData",fd.TxHash.String())
 		peers := h.peers.peerWithOutFileData(fd.TxHash)
-		numDirect := len(peers)/2
+		//numDirect := len(peers)/2
 		// TODO dont do broadcast fileData directly 
 		// Send the fileData unconditionally to a subset of our peers
-		for _, peer := range peers[:numDirect] {
+		for _, peer := range peers {
 			fdset[peer] = append(fdset[peer], fd.TxHash)
 		}
-		log.Info("全量广播----","length",len(peers[:numDirect]))
+		log.Info("全量广播----","length",len(peers))
 		// For the remaining peers, send announcement only
-		for _, peer := range peers[numDirect:] {
-			//for _, peer := range peers {	
-			annos[peer] = append(annos[peer], fd.TxHash)
-		}
-		log.Info("广播hash----","length",len(peers[numDirect:]))
+		// for _, peer := range peers[numDirect:] {
+		// 	//for _, peer := range peers {	
+		// 	annos[peer] = append(annos[peer], fd.TxHash)
+		// }
+		//log.Info("广播hash----","length",len(peers[numDirect:]))
 	}
 
 	for peer, hashes := range fdset {
@@ -687,17 +696,41 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 		peer.AsyncSendFileData(hashes)
 	}
 
+	// for peer, hashes := range annos {
+	// 	annPeers++
+	// 	annCount += len(hashes)
+	// 	log.Info("BroadcastFileData----hash","peer info",peer.Info().Enode,"peer id",peer.ID())
+	// 	peer.AsyncSendPooledFileDataHashes(hashes)
+	// }
+
+	log.Debug("Distributed fileData","bcastpeers", directPeers, "bcastcount", directCount,"plainfds",len(fds))
+}
+
+// GetFileDatasFileData should get fileData by txHash from remote peer. 
+func (h *handler) GetFileDatasFileData(hashs []common.Hash){
+	var (
+		annCount    int // Number of fileDatas announced across all peers (duplicates included)
+		annPeers    int // Number of peers announced about fileDatas
+
+		annos = make(map[*ethPeer][]common.Hash) // Set peer->hash to announce
+	)
+
+	for _,hash := range hashs {
+		log.Info("GetFileDatasFileData---","需要找的",hash.String())
+		peers := h.peers.peersToGetFileData()
+		num := len(peers)/2
+		// For the remaining peers, send announcement only
+		for _, peer := range peers[num:] {	
+			annos[peer] = append(annos[peer], hash)
+		}
+	}
 	for peer, hashes := range annos {
 		annPeers++
 		annCount += len(hashes)
-		log.Info("BroadcastFileData----hash","peer info",peer.Info().Enode,"peer id",peer.ID())
-		peer.AsyncSendPooledFileDataHashes(hashes)
+		log.Info("GetFileDatasFileData----hash","peer info",peer.Info().Enode,"peer id",peer.ID())
+		peer.RequestFileDatas(hashes)
 	}
-
-	log.Debug("Distributed fileData","bcastpeers", directPeers, "bcastcount", directCount,"plainfds",len(fds))
-
 }
-
 
 // BroadcastTransactions will propagate a batch of transactions
 // - To a square root of all peers for non-blob transactions
@@ -772,6 +805,20 @@ func (h *handler) fdBroadcastLoop() {
 		case event := <-h.fdsCh:
 			h.BroadcastFileData(event.Fileds)
 		case <-h.fdsSub.Err():
+			return
+		}
+	}
+}
+
+// getFileDatasLoop get fileData by Txhash from connected peers.
+func (h *handler) fdGetFileDatasLoop() {
+	defer h.wg.Done()
+	for {
+		select {
+		case event := <-h.fdHashCh:
+			log.Info("fdGetFileDatasLoop----","hash",event.Hashes[0].String())
+			h.GetFileDatasFileData(event.Hashes)
+		case <-h.fdHashSub.Err():
 			return
 		}
 	}
