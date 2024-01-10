@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (
@@ -68,7 +69,7 @@ type Config struct {
 
 var DefaultConfig = Config{
 	Journal:  "fileData.rlp",
-	Lifetime: 3 * 24 * time.Hour,
+	Lifetime: 10 * time.Second,
 	Rejournal: time.Hour,
 	JournalRemote: true,
 	GlobalSlots: 4096,
@@ -96,13 +97,13 @@ type DiskDetail struct {
 	Data          types.FileData			`json:"Data"`
 }
 
-type DiskCache struct {
-   Cache  map[common.Hash]DiskDetail   `json:"Cache"`
+type HashCollect struct {
+   Hashes   []common.Hash  `json:"Hashes"`
 }
 
-func NewDiskCache() *DiskCache{
-	return &DiskCache{
-		Cache: make(map[common.Hash]DiskDetail),
+func newHashCollect() *HashCollect{
+	return &HashCollect{
+		Hashes: make([]common.Hash, 0),
 	}
 }
 
@@ -119,8 +120,7 @@ type FilePool struct {
 	journal         *journal                // Journal of local fileData to back up to disk
 	subs            event.SubscriptionScope // Subscription scope to unsubscribe all on shutdown
 	all             *lookup
-	diskCache				map[common.Hash]DiskDetail 
-//	diskCache1      *lru.Cache[common.Hash,DiskDetail]		
+	diskCache				*HashCollect  //	
 	collector       map[common.Hash]*types.FileData
 	beats           map[common.Hash]time.Time // Last heartbeat from each known account
 	reorgDoneCh     chan chan struct{}
@@ -136,8 +136,7 @@ func New(config Config, chain BlockChain) *FilePool {
 		chainconfig:     chain.Config(),
 		signer:          types.LatestSigner(chain.Config()),
 		all:             newLookup(),
-		diskCache:			 make(map[common.Hash]DiskDetail),
-		//diskCache1:      lru.NewCache[common.Hash,DiskDetail](10000000),
+		diskCache:			 newHashCollect(),
 		collector:       make(map[common.Hash]*types.FileData),
 		beats:           make(map[common.Hash]time.Time),
 		reorgDoneCh:     make(chan chan struct{}),
@@ -218,22 +217,32 @@ func (fp *FilePool) loop() {
 			continue
 		 }
 
-		var cache DiskCache
-		err = json.Unmarshal(data,&cache)
+		var coll HashCollect
+		err = json.Unmarshal(data,&coll)
 		if err != nil {
 			continue
 		}
-		for txHash,disk := range cache.Cache {
-			if disk.TimeRecord.Before(time.Now().Add(3*24*time.Hour)) {
-				disk.State = DISK_FILEDATA_STATE_DEL
-			}
-			cache.Cache[txHash] = disk
-		}
 
-		newData,err := json.Marshal(cache)
-		if err == nil {
-			diskDb.Put(HashListKey,newData)	
+		var detail DiskDetail
+		for index,txHash := range coll.Hashes {
+			data,err := rawdb.ReadFileDataDetail(diskDb,txHash)
+			if err != nil {
+				continue
+			}
+			err = rlp.DecodeBytes(data,&detail)
+			if err == nil {
+				if detail.TimeRecord.Before(time.Now().Add(3*24*time.Hour)) {
+					detail.State = DISK_FILEDATA_STATE_DEL
+				}
+				if detail.State == DISK_FILEDATA_STATE_DEL {
+					data, _ := rlp.EncodeToBytes(detail)
+					rawdb.WriteFileDataDetail(diskDb,data,txHash)
+					fp.diskCache.Hashes = removeElement(fp.diskCache.Hashes,index)
+				}
+			}
 		}
+		collData,_ := json.Marshal(fp.diskCache)
+		diskDb.Put(HashListKey,collData)	
 
 		// Handle inactive txHash fileData eviction
 		case <-evict.C:
@@ -242,7 +251,11 @@ func (fp *FilePool) loop() {
 				// Any non-locals old enough should be removed
 				if time.Since(fp.beats[txHash]) > fp.config.Lifetime {
 					for txHash := range fp.collector {
-						delete(fp.diskCache,txHash)
+						for ind,hash := range fp.diskCache.Hashes {
+							if hash == txHash {
+								removeElement(fp.diskCache.Hashes,ind)
+							}
+						}
 						fp.removeFileData(txHash)
 					}
 				}
@@ -260,6 +273,11 @@ func (fp *FilePool) loop() {
 			}
 		}
 	}
+}
+
+func removeElement(arr []common.Hash, index int) []common.Hash {
+	arr[index] = arr[len(arr)-1]
+	return arr[:len(arr)-1]
 }
 
 // // scheduleReorgLoop schedules runs of reset and promoteExecutables. Code above should not
@@ -451,26 +469,12 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	if !ok {
 		return errors.New("file pool dont have fileData")
 	}
-
 	diskDb := fp.currentState.Database().DiskDB()
-
-	fp.diskCache[hash] = DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
-	// if !fp.diskCache1.Contains(hash) {
-	// 	fp.diskCache1.Add(hash,DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData})
-	// }
-	
-	cache := NewDiskCache()
-	for hash,info := range fp.diskCache{
-		cache.Cache[hash]= info
-	}
-
-	data, err := json.Marshal(cache)
-	if err != nil {
-		return err
-	}
-
+	detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
+	data,_ := rlp.EncodeToBytes(detail)
+	rawdb.WriteFileDataDetail(diskDb,data,hash)
+	fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 	log.Info("SaveFileDataToDisk----","txHash",hash.String())
-	diskDb.Put(HashListKey, data)
 	fp.removeFileData(hash)
 	return nil
 }
@@ -498,6 +502,14 @@ func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common
 	rawdb.WriteFileDatas(db,blcHash,blcNr,list)
 	
 	for _,hash := range hashes {
+		fd := fp.all.collector[hash]
+		detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fd}
+		data,err := rlp.EncodeToBytes(detail)
+		if err != nil {
+			log.Info("SaveBatchFileDatasToDisk-----EncodeToBytes bantch","err",err.Error())
+		}
+		rawdb.WriteFileDataDetail(db,data,hash)
+		fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 		fp.removeFileData(hash)
 	}
 	return true,nil
@@ -529,7 +541,7 @@ Lable:
 	fd := fp.get(hash)
 	if fd == nil {
 		diskDb := fp.currentState.Database().DiskDB()
-		data,err := diskDb.Get(HashListKey)
+		data,err := rawdb.ReadFileDataDetail(diskDb,hash)
 		if err != nil || len(data) == 0{
 				log.Info("本地节点没有从需要从远端要--------","hash",hash.String())
 				if getTimes < 1 {
@@ -545,16 +557,15 @@ Lable:
 		}
 
 		if len(data) > 0 {
-			var cache DiskCache
-			err = json.Unmarshal(data,&cache)
+			var detail DiskDetail
+			err := rlp.DecodeBytes(data,&detail) 
 			if err != nil {
 				return nil,err
 			}
-			val := cache.Cache[hash]
-			if val.State == DISK_FILEDATA_STATE_DEL {
+			if detail.State == DISK_FILEDATA_STATE_DEL {
 				return nil,errors.New("fileData already del")
 			}
-			return &val.Data,nil
+			return &detail.Data,nil
 		}
 	}
 	return fd,nil
@@ -680,7 +691,6 @@ func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err erro
 	fp.journalFd(hash, fd)
 	fp.all.Add(fd)
 	fp.beats[hash] = time.Now()
-
 	log.Trace("Pooled new future transaction", "hash", hash)
 	return replaced, nil
 }
