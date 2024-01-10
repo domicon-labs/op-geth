@@ -1896,6 +1896,10 @@ func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
 }
 
+func (f *FileDataAPI) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (bool,error) {
+	return f.b.CheckSelfState(blockNr)
+}
+
 func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) *rpc.Result {
 	log.Info("FileDataAPI----1","GetFileDataByHashes---called--len(hashes)",len(hashes.TxHashes))
 	res := rpc.NewResult(uint64(len(hashes.TxHashes)))

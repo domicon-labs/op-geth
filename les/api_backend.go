@@ -70,6 +70,10 @@ func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, erro
 	panic("unimplemented")
 }
 
+func (* LesApiBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
+	return true,nil
+}
+
 // GetFileDataByHash implements ethapi.Backend.
 func (*LesApiBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	panic("unimplemented")

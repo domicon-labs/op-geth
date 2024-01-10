@@ -640,6 +640,10 @@ func (b testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error
 	return nil, nil
 }
 
+func (b testBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
+	return true,nil
+}
+
 // BatchFileDataByHashes implements Backend.
 func (b testBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	panic("unimplemented")

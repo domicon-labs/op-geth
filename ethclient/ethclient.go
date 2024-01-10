@@ -323,6 +323,12 @@ func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFi
 	return fd,err
 }
 
+func (ec *Client) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (bool,error) {
+	var flag bool
+	err := ec.c.CallContext(ctx,&flag,"eth_checkSelfState",blockNr.String()) 
+	return flag,err
+}
+
 func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context,hashes rpc.TxHashes) (bool,error){
 	//var res rpc.Result
 	var res bool

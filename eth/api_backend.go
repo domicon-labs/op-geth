@@ -325,6 +325,30 @@ func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, er
 	return nil, err
 }
 
+func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
+	bc := b.eth.BlockChain()
+  block := bc.GetBlockByNumber(uint64(blockNr))
+	db := b.eth.chainDb
+	res := make([]*types.FileData, 0)
+	log.Info("EthAPIBackend-----CheckSelfState", "blockNr", block.Number().Uint64())
+	if block != nil {
+		for i := 1; i < int(block.NumberU64()); i++ {
+			currentNum := i
+			currentBlock := bc.GetBlockByNumber(uint64(currentNum))
+			headHash := currentBlock.Hash()
+			fds := rawdb.ReadFileDatas(db,headHash,uint64(currentNum))
+			if len(fds)!= 0 {
+				 res = append(res, fds...)
+			}
+		}
+	}
+
+	if len(res) != 0 {
+		return true,nil
+	}
+	return false,nil
+}
+
 func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
 	log.Info("EthAPIBackend-----GetFileDataByHashes", "len(hashes)",len(hashes.TxHashes))
 	flags := make([]bool, len(hashes.TxHashes))
