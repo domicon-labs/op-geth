@@ -1,6 +1,9 @@
 package types
 
 import (
+	"errors"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -50,6 +53,27 @@ func (f *FileData) Decode(data []byte) error {
 func (f *FileData) Size() uint64 {
 	data,_ := rlp.EncodeToBytes(f)
 	return uint64(len(data))
+}
+
+func (f *FileData) WithSignature(signer FdSigner,sign []byte) (*FileData,error) {
+	if len(sign) == 0 {
+		return nil,errors.New("sign is empty")
+	}
+	r, s, v, err := signer.SignatureValues(f, sign)
+	if err != nil {
+		return nil, err
+	}
+	newSign := make([]byte, 0)
+	newSign = append(newSign,	r.Bytes()...)
+	newSign = append(newSign, s.Bytes()...)
+	newSign = append(newSign, v.Bytes()...)
+	f.SignData = newSign
+	return f,nil
+} 
+
+func (f *FileData) RawSignatureValues() (r, s, v *big.Int) {
+	sign := f.SignData
+	return decodeSignature(sign)
 }
 
 type FileDatas []*FileData

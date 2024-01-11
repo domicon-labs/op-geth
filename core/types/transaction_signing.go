@@ -205,17 +205,6 @@ func (s cancunSigner) Sender(tx *Transaction) (common.Address, error) {
 }
 
 
-// SignatureFileData implements Signer.
-func (s cancunSigner) SignatureFileData(fd *FileData) error {
-	if len(fd.SignData) == 0 {
-		return errors.New("file data signature is empty")
-	}
-
-
-	return nil
-}
-
-
 func (s cancunSigner) Equal(s2 Signer) bool {
 	x, ok := s2.(cancunSigner)
 	return ok && x.chainId.Cmp(s.chainId) == 0
