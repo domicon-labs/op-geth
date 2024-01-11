@@ -237,7 +237,7 @@ func (*backendMock) UploadFileData(data []byte) error {
 }
 
 // UploadFileDataByParams implements Backend.
-func (*backendMock) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
+func (*backendMock) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, gasPrice uint64,commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
 	return nil
 }
 

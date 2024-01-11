@@ -1888,8 +1888,8 @@ func NewFileDataAPI(b Backend) *FileDataAPI {
 	return &FileDataAPI{b, signer}
 }
 
-func (f *FileDataAPI) UploadFileDataByParams(sender, submitter common.Address, index, length uint64, commitment, data, signData []byte, txHash common.Hash) error {
-	return f.b.UploadFileDataByParams(sender, submitter, index, length, commitment, data, signData, txHash)
+func (f *FileDataAPI) UploadFileDataByParams(sender, submitter common.Address, index, length, gasPrice uint64, commitment, data, signData []byte, txHash common.Hash) error {
+	return f.b.UploadFileDataByParams(sender, submitter, index, length,gasPrice, commitment, data, signData, txHash)
 }
 
 func (f *FileDataAPI) UploadFileData(data []byte) error {

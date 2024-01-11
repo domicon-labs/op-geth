@@ -609,7 +609,7 @@ func (b testBackend) UploadFileData(data []byte) error {
 }
 
 // UploadFileDataByParams implements Backend.
-func (b testBackend) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
+func (b testBackend) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, gasPrice uint64,commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
 	return nil
 }
 

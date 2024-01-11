@@ -15,6 +15,7 @@ import (
 type FileData struct {
 	Sender     common.Address  	`json:"Sender"` //文件发送者
 	Submitter  common.Address		`json:"Submitter"`//文件上传提交者
+	GasPrice	 uint64						`json:"GasPrice"` //交易费率
 	Index      uint64						`json:"Index"`//文件发送者类nonce 相同的index认为是重复交易
 	Length     uint64						`json:"Length"`//长度
 	Commitment []byte						`json:"Commitment"`//对应data的commitment
@@ -23,10 +24,11 @@ type FileData struct {
 	TxHash     common.Hash			`json:"TxHash"`//
 }
 
-func NewFileData(sender, submitter common.Address, index,length uint64, commitment, data, sign []byte,txHash common.Hash) *FileData {
+func NewFileData(sender, submitter common.Address, index,length,gasPrice uint64, commitment, data, sign []byte,txHash common.Hash) *FileData {
 	return &FileData{
 		Sender:     sender,
 		Submitter:  submitter,
+		GasPrice:	 	gasPrice,	
 		Index:      index,
 		Length:	    length,
 		Commitment: commitment,

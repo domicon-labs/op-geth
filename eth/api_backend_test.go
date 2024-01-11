@@ -35,6 +35,7 @@ func TestUploadFileDataByParams(t *testing.T){
 	
 	index := 2
 	length := 1024
+	gasPrice := 200
 	commit := []byte("commit")
 	s := strconv.Itoa(index)
 	data := bytes.Repeat([]byte(s), 1024)
@@ -45,7 +46,7 @@ func TestUploadFileDataByParams(t *testing.T){
 		time.Sleep(500 * time.Millisecond)
 		sender := crypto.PubkeyToAddress(priv.PublicKey)
 		submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
-		err = client.UploadFileDataByParams(context.TODO(),sender,submitter,uint64(index),uint64(length),data,commit,sign,txHash)
+		err = client.UploadFileDataByParams(context.TODO(),sender,submitter,uint64(index),uint64(length),uint64(gasPrice),data,commit,sign,txHash)
 		if err != nil {
 			println("UploadFileDataByParams---err",err.Error())
 		}

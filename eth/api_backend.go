@@ -305,8 +305,8 @@ func (b *EthAPIBackend) UploadFileData(data []byte) error {
 	//return nil
 }
 
-func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address, index, length uint64, commitment, data, signData []byte, txHash common.Hash) error {
-	fd := types.NewFileData(sender, submitter, index, length, commitment, data, signData, txHash)
+func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address, index, length, gasPrice uint64, commitment, data, signData []byte, txHash common.Hash) error {
+	fd := types.NewFileData(sender, submitter, index, length, gasPrice, commitment, data, signData, txHash)
 	if b.eth.seqRPCService != nil {
 		if err := b.eth.fdPool.Add([]*types.FileData{fd}, true, false)[0]; err != nil {
 			log.Warn("successfully sent tx to sequencer, but failed to persist in local fileData pool", "err", err, "txHash", txHash.String())

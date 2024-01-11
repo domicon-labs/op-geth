@@ -85,7 +85,7 @@ type Backend interface {
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 
 	// FileData pool API
-	UploadFileDataByParams(sender, submitter common.Address, index, length uint64, commitment, data, signData []byte, txHash common.Hash) error
+	UploadFileDataByParams(sender, submitter common.Address, index, length, gasPrice uint64, commitment, data, signData []byte, txHash common.Hash) error
 	UploadFileData(data []byte) error
 	CheckSelfState(blockNr rpc.BlockNumber) (bool,error)
 	GetFileDataByHash(hash common.Hash) (*types.FileData, error)
