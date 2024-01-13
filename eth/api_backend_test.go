@@ -1,14 +1,14 @@
 package eth
 
 import (
-	"bytes"
+	//"bytes"
 	"context"
-	"strconv"
+	//"strconv"
 	"testing"
-	"time"
+	//"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	//"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -23,40 +23,44 @@ const (
 
 func TestUploadFileDataByParams(t *testing.T){
 
-	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
-	if err != nil {
-		println("DialContext-----err",err.Error())
-	}
+	// client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	// if err != nil {
+	// 	println("DialContext-----err",err.Error())
+	// }
 
-	priv, err := crypto.HexToECDSA(privateKey)
-	if err != nil {
-		println("HexToECDSA---err",err.Error())
-	}
+	// priv, err := crypto.HexToECDSA(privateKey)
+	// if err != nil {
+	// 	println("HexToECDSA---err",err.Error())
+	// }
 	
-	index := 2
-	length := 1024
-	gasPrice := 200
+	// index := 2
+	// length := 1024
+	// gasPrice := 200
 	commit := []byte("commit")
-	s := strconv.Itoa(index)
-	data := bytes.Repeat([]byte(s), 1024)
-	sign := []byte("sign")
-	txHash := common.BytesToHash([]byte("2"))
+
+	//dumper.Printf("commit-----%x",commit)
+	println("commit-----",&commit)
+	
+	// s := strconv.Itoa(index)
+	// data := bytes.Repeat([]byte(s), 1024)
+	// sign := []byte("sign")
+	// txHash := common.BytesToHash([]byte("2"))
 
 	// for  {
-		time.Sleep(500 * time.Millisecond)
-		sender := crypto.PubkeyToAddress(priv.PublicKey)
-		submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
-		err = client.UploadFileDataByParams(context.TODO(),sender,submitter,uint64(index),uint64(length),uint64(gasPrice),data,commit,sign,txHash)
-		if err != nil {
-			println("UploadFileDataByParams---err",err.Error())
-		}
+		// time.Sleep(500 * time.Millisecond)
+		// sender := crypto.PubkeyToAddress(priv.PublicKey)
+		// submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
+		// err = client.UploadFileDataByParams(context.TODO(),sender,submitter,uint64(index),uint64(length),uint64(gasPrice),data,commit,sign,txHash)
+		// if err != nil {
+		// 	println("UploadFileDataByParams---err",err.Error())
+		//}
 		//index++
 		// s := strconv.Itoa(index)
 		// bytes.Repeat([]byte(s), 1024)
 		// data = []byte(string(data))
 		// txHash = common.BytesToHash([]byte(s))
 
-		println("发送的交易哈希是txHash: ",txHash.String(),"data: ",s,"data length: ",len(data))
+	//	println("发送的交易哈希是txHash: ",txHash.String(),"data: ",s,"data length: ",len(data))
 	// }
 	
 }

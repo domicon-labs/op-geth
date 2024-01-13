@@ -129,146 +129,6 @@ type FdSigner interface {
 	Equal(FdSigner) bool
 }
 
-
-// type cancunFdSigner struct{ londonFdSigner }
-
-// // NewCancunSigner returns a signer that accepts
-// // - EIP-4844 
-// // - EIP-1559 
-// // - EIP-2930 
-// // - EIP-155 
-// // - legacy.
-// func NewCancunFdSigner(chainId *big.Int) FdSigner {
-// 	return cancunFdSigner{londonFdSigner{eip2930FdSigner{NewEIP155FdSigner(chainId)}}}
-// }
-
-// func (s cancunFdSigner) Sender(fd *FileData) (common.Address, error) {
-// 	R, S, V := fd.RawSignatureValues()
-// 	// Blob txs are defined to use 0 and 1 as their recovery
-// 	// id, add 27 to become equivalent to unprotected Homestead signatures.
-// 	V = new(big.Int).Add(V, big.NewInt(27))
-// 	return recoverPlain(s.Hash(fd), R, S, V, true)
-// }
-
-// func (s cancunFdSigner) Equal(s2 FdSigner) bool {
-// 	x, ok := s2.(cancunFdSigner)
-// 	return ok && x.chainId.Cmp(s.chainId) == 0
-// }
-
-// func (s cancunFdSigner) SignatureValues(fd *FileData, sig []byte) (R, S, V *big.Int, err error) {
-// 	R, S, _ = decodeSignature(sig)
-// 	V = big.NewInt(int64(sig[64]))
-// 	return R, S, V, nil
-// }
-
-// // Hash returns the hash to be signed by the sender.
-// // It does not uniquely identify the transaction.
-// func (s cancunFdSigner) Hash(fd *FileData) common.Hash {
-// 	return rlpHash([]interface{}{
-// 		s.chainId, 
-// 		fd.Sender,
-// 		fd.Submitter,
-// 		fd.GasPrice,
-// 		fd.Index,
-// 		fd.Length,
-// 		fd.Commitment,
-// 		uint(0), 
-// 		uint(0),
-// 		uint(0),
-// 	})
-// }
-
-// type londonFdSigner struct{ eip2930FdSigner }
-
-// // NewLondonFdSigner returns a signer that accepts
-// // - EIP-1559 
-// // - EIP-2930 
-// // - EIP-155 
-// // - legacy Homestead 
-// func NewLondonFdSigner(chainId *big.Int) FdSigner {
-// 	return londonFdSigner{eip2930FdSigner{NewEIP155FdSigner(chainId)}}
-// }
-
-// func (s londonFdSigner) Sender(fd *FileData) (common.Address, error) {
-// 	 R, S, V := fd.RawSignatureValues()
-// 	// DynamicFee txs are defined to use 0 and 1 as their recovery
-// 	// id, add 27 to become equivalent to unprotected Homestead signatures.
-// 	V = new(big.Int).Add(V, big.NewInt(27))
-// 	return recoverPlain(s.Hash(fd), R, S, V, true)
-// }
-
-// func (s londonFdSigner) Equal(s2 FdSigner) bool {
-// 	x, ok := s2.(londonFdSigner)
-// 	return ok && x.chainId.Cmp(s.chainId) == 0
-// }
-
-// func (s londonFdSigner) SignatureValues(fd *FileData, sig []byte) (R, S, V *big.Int, err error) {
-// 	R, S, _ = decodeSignature(sig)
-// 	V = big.NewInt(int64(sig[64]))
-// 	return R, S, V, nil
-// }
-
-// // Hash returns the hash to be signed by the sender.
-// // It does not uniquely identify the transaction.
-// func (s londonFdSigner) Hash(fd *FileData) common.Hash {
-// 	return rlpHash([]interface{}{
-// 		s.chainId, 
-// 		fd.Sender,
-// 		fd.Submitter,
-// 		fd.GasPrice,
-// 		fd.Index,
-// 		fd.Length,
-// 		fd.Commitment,
-// 		uint(0), 
-// 	})
-// }
-
-// type eip2930FdSigner struct{ EIP155FdSigner }
-
-// // NewEIP2930Signer returns a signer that accepts EIP-2930 access list transactions,
-// // EIP-155 replay protected transactions, and legacy Homestead transactions.
-// func NewEIP2930FdSigner(chainId *big.Int) FdSigner {
-// 	return eip2930FdSigner{NewEIP155FdSigner(chainId)}
-// }
-
-// func (s eip2930FdSigner) ChainID() *big.Int {
-// 	return s.chainId
-// }
-
-// func (s eip2930FdSigner) Equal(s2 FdSigner) bool {
-// 	x, ok := s2.(eip2930FdSigner)
-// 	return ok && x.chainId.Cmp(s.chainId) == 0
-// }
-
-// func (s eip2930FdSigner) Sender(fd *FileData) (common.Address, error) {
-// 	R, S, V := fd.RawSignatureValues()
-// 	V = new(big.Int).Add(V, big.NewInt(27))
-// 	println("r----s----v---2",R.Uint64(),S.Uint64(),V.Uint64())
-// 	return recoverPlain(s.Hash(fd), R, S, V, true)
-// }
-
-// func (s eip2930FdSigner) SignatureValues(fd *FileData, sig []byte) (R, S, V *big.Int, err error) {
-// 	R, S, _ = decodeSignature(sig)
-// 	V = big.NewInt(int64(sig[64]))
-// 	println("SignatureValues-----1,R---S---V",R.Uint64(),S.Uint64(),V.Uint64())
-// 	return R, S, V, nil
-// }
-
-// // Hash returns the hash to be signed by the sender.
-// // It does not uniquely identify the transaction.
-// func (s eip2930FdSigner) Hash(fd *FileData) common.Hash {
-// 	return rlpHash([]interface{}{
-// 		s.chainId,
-// 		fd.Sender,
-// 		fd.Submitter,
-// 		fd.GasPrice,
-// 		fd.Index,
-// 		fd.Length,
-// 		fd.Commitment,
-// 		uint(0),
-// 	})
-// }
-
 // EIP155Signer implements Signer using the EIP-155 rules. This accepts transactions which
 // are replay-protected as well as unprotected homestead transactions.
 type EIP155FdSigner struct {
@@ -295,10 +155,9 @@ func (s EIP155FdSigner) Equal(s2 FdSigner) bool {
 }
 
 func (s EIP155FdSigner) Sender(fd *FileData) (common.Address, error) {
-	R, S, V := fd.RawSignatureValues()
+	R, S, V := sliteSignature(fd.SignData)
 	V = new(big.Int).Sub(V, s.chainIdMul)
 	V.Sub(V, big8)
-	V.Sub(V, new(big.Int).SetUint64(27))
 	return recoverPlain(s.Hash(fd), R, S, V, true)
 }
 
@@ -369,7 +228,7 @@ func (s FrontierFdSigner) Equal(s2 FdSigner) bool {
 }
 
 func (fs FrontierFdSigner) Sender(fd *FileData) (common.Address, error) {
-	r, s, v := fd.RawSignatureValues()
+	r, s, v := sliteSignature(fd.SignData)
 	v = v.Mul(v,new(big.Int).SetUint64(27))
 	return recoverPlain(fs.Hash(fd), r, s, v, false)
 }
@@ -393,6 +252,13 @@ func (fs FrontierFdSigner) Hash(fd *FileData) common.Hash {
 		fd.Commitment,
 	})
 }
+
+func sliteSignature(sig []byte) (r,s,v *big.Int) {
+	r = new(big.Int).SetBytes(sig[:32])
+	s = new(big.Int).SetBytes(sig[32:64])
+	v = new(big.Int).SetBytes(sig[64:])
+	return r,s,v
+ }
 
 // func decodeFdSignature(signer FdSigner,sig []byte) (r, s, v *big.Int) {
 // 	if len(sig) != crypto.SignatureLength {
