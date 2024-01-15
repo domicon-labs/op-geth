@@ -12,7 +12,6 @@ import (
 
 
 func TestEIP155FdSigning(t *testing.T) {
-
 	privateKey := "3180b6cc1ef8d68c00dc30c83b9f00321a60dbeeac202e7671312dc0cd9707b9"
 	key, err := crypto.HexToECDSA(privateKey)
 	if err != nil {

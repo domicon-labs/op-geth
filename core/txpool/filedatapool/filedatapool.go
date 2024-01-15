@@ -1,12 +1,14 @@
 package filedatapool
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	kzg "github.com/domicon-labs/kzg-sdk"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -53,6 +55,7 @@ const (
 	DISK_FILEDATA_STATE_UNKNOW  
 )
 
+const dSrsSize = 1 << 16
 type Config struct {
 	Journal   string           // Journal of local file to survive node restarts
 	Locals    []common.Address // Addresses that should be treated by default as local
@@ -116,7 +119,7 @@ type FilePool struct {
 	mu              sync.RWMutex
 	currentHead     atomic.Pointer[types.Header] // Current head of the blockchain
 	currentState    *state.StateDB               // Current state in the blockchain head
-	signer          types.Signer
+	signer          types.FdSigner
 	journal         *journal                // Journal of local fileData to back up to disk
 	subs            event.SubscriptionScope // Subscription scope to unsubscribe all on shutdown
 	all             *lookup
@@ -134,7 +137,7 @@ func New(config Config, chain BlockChain) *FilePool {
 		config:          config,
 		chain:			 		 chain,		
 		chainconfig:     chain.Config(),
-		signer:          types.LatestSigner(chain.Config()),
+		signer:          types.LatestFdSigner(chain.Config()),
 		all:             newLookup(),
 		diskCache:			 newHashCollect(),
 		collector:       make(map[common.Hash]*types.FileData),
@@ -704,7 +707,7 @@ func (fp *FilePool) journalFd(txHash common.Hash, fd *types.FileData) {
 		return
 	}
 	if err := fp.journal.insert(fd); err != nil {
-		log.Warn("Failed to journal local transaction", "err", err)
+		log.Warn("Failed to journal local fileData", "err", err)
 	}
 }
 
@@ -713,9 +716,38 @@ func (fp *FilePool) journalFd(txHash common.Hash, fd *types.FileData) {
 // This check is meant as an early check which only needs to be performed once,
 // and does not require the pool mutex to be held.
 func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) error {
+	if fd.Length != uint64(len(fd.Data)) {
+		return errors.New("fileData data length not match legth")
+	}
 
-	//fp.signer.SignatureValues()
+	if len(fd.SignData) == 0  {
+		return errors.New("fileData signature is empty")
+	}
 
+	recover,err := types.FdSender(fp.signer,fd)
+	if err != nil || recover != fd.Sender {
+		return errors.New("signature is invalid")
+	}
+	
+	path := "../srs"
+	domiconSDK,err := kzg.InitDomiconSdk(dSrsSize,path)
+	if err != nil {
+		return err
+	}
+
+	digst,err := domiconSDK.GenerateDataCommit(fd.Data)
+	if err != nil {
+		return errors.New("GenerateDataCommit failed")
+	}
+
+	fixedArray := digst.Bytes()
+  for i := 0; i < 48; i++ {
+		fixedArray[i] = byte(i)
+  }
+  slice := fixedArray[:]
+	if bytes.Equal(slice, fd.Commitment) {
+		return errors.New("commitment is not match the data")
+	}	
 
 	return nil
 }

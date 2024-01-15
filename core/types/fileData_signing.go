@@ -7,6 +7,7 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/binary"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -156,8 +157,8 @@ func (s EIP155FdSigner) Equal(s2 FdSigner) bool {
 
 func (s EIP155FdSigner) Sender(fd *FileData) (common.Address, error) {
 	R, S, V := sliteSignature(fd.SignData)
-	V = new(big.Int).Sub(V, s.chainIdMul)
-	V.Sub(V, big8)
+	// V = new(big.Int).Sub(V, s.chainIdMul)
+	// V.Sub(V, big8)
 	return recoverPlain(s.Hash(fd), R, S, V, true)
 }
 
@@ -165,27 +166,25 @@ func (s EIP155FdSigner) Sender(fd *FileData) (common.Address, error) {
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155FdSigner) SignatureValues(fd *FileData, sig []byte) (R, S, V *big.Int, err error) {
 	R, S, V = decodeSignature(sig)
-	if s.chainId.Sign() != 0 {
-		V = big.NewInt(int64(sig[64] + 35))
-		V.Add(V, s.chainIdMul)
-	}
+	// if s.chainId.Sign() != 0 {
+	// 	V = big.NewInt(int64(sig[64] + 35))
+	// 	V.Add(V, s.chainIdMul)
+	// }
 	return R, S, V, nil
 }
 
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s EIP155FdSigner) Hash(fd *FileData) common.Hash {
-	return rlpHash([]interface{}{
-		fd.Sender,
-		fd.Submitter,
-		fd.GasPrice,
-		fd.Index,
-		fd.Length,
-		fd.Commitment,
-		s.chainId, 
-		uint(0), 
-		uint(0),
-	})
+	data := make([]byte,0)
+	data = append(data, uint64ToBigEndianHexBytes(s.chainId.Uint64())...)	
+	data = append(data, fd.Sender.Bytes()...)
+	data = append(data, fd.Submitter.Bytes()...)
+	data = append(data, uint64ToBigEndianHexBytes(fd.GasPrice)...)
+	data = append(data, uint64ToBigEndianHexBytes(fd.Index)...)
+	data = append(data, uint64ToBigEndianHexBytes(fd.Length)...)
+	data = append(data, fd.Commitment...)
+	return crypto.Keccak256Hash(data)
 }
 
 // HomesteadFdSigner implements Signer interface using the
@@ -243,14 +242,14 @@ func (fs FrontierFdSigner) SignatureValues(fd *FileData, sig []byte) (r, s, v *b
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierFdSigner) Hash(fd *FileData) common.Hash {
-	return rlpHash([]interface{}{
-		fd.Sender,
-		fd.Submitter,
-		fd.GasPrice,
-		fd.Index,
-		fd.Length,
-		fd.Commitment,
-	})
+	data := make([]byte,0)	
+	data = append(data, fd.Sender.Bytes()...)
+	data = append(data, fd.Submitter.Bytes()...)
+	data = append(data, uint64ToBigEndianHexBytes(fd.GasPrice)...)
+	data = append(data, uint64ToBigEndianHexBytes(fd.Index)...)
+	data = append(data, uint64ToBigEndianHexBytes(fd.Length)...)
+	data = append(data, fd.Commitment...)
+	return crypto.Keccak256Hash(data)
 }
 
 func sliteSignature(sig []byte) (r,s,v *big.Int) {
@@ -260,13 +259,10 @@ func sliteSignature(sig []byte) (r,s,v *big.Int) {
 	return r,s,v
  }
 
-// func decodeFdSignature(signer FdSigner,sig []byte) (r, s, v *big.Int) {
-// 	if len(sig) != crypto.SignatureLength {
-// 		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
-// 	}
-// 	r = new(big.Int).SetBytes(sig[:32])
-// 	s = new(big.Int).SetBytes(sig[32:64])
-// 	v = new(big.Int).SetBytes([]byte{sig[64] + 27})
-
-// 	return r, s, v
-// }
+ func uint64ToBigEndianHexBytes(value uint64) []byte {
+	// 创建一个长度为 8 的字节切片
+	byteData := make([]byte, 8)
+	// 使用 binary.BigEndian.PutUint64 将 uint64 转换为大端字节序
+	binary.BigEndian.PutUint64(byteData, value)
+	return byteData
+}
