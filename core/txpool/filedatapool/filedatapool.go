@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -719,17 +721,16 @@ func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) er
 	if fd.Length != uint64(len(fd.Data)) {
 		return errors.New("fileData data length not match legth")
 	}
-
 	if len(fd.SignData) == 0  {
 		return errors.New("fileData signature is empty")
 	}
-
 	recover,err := types.FdSender(fp.signer,fd)
 	if err != nil || recover != fd.Sender {
 		return errors.New("signature is invalid")
 	}
 	
-	path := "../srs"
+	currentPath, _ := os.Getwd()
+	path := strings.Split(currentPath,"/core")[0] + "/srs"
 	domiconSDK,err := kzg.InitDomiconSdk(dSrsSize,path)
 	if err != nil {
 		return err
@@ -739,11 +740,8 @@ func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) er
 	if err != nil {
 		return errors.New("GenerateDataCommit failed")
 	}
-
+	
 	fixedArray := digst.Bytes()
-  for i := 0; i < 48; i++ {
-		fixedArray[i] = byte(i)
-  }
   slice := fixedArray[:]
 	if bytes.Equal(slice, fd.Commitment) {
 		return errors.New("commitment is not match the data")
