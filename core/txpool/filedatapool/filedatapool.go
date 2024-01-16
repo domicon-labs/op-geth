@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -558,6 +559,16 @@ Lable:
 				if getTimes <= 1 {
 					goto Lable
 				}
+
+				currentPath, _ := os.Getwd()
+				file, err := os.OpenFile(currentPath+"/unknowTxHash.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+				str := fmt.Sprintf("can not find fileData by TxHash is： %s time to ask ： %s",hash.Hex(),time.Now().String())
+				writeStr := str + "\n"
+				if _, err := file.WriteString(writeStr); err != nil {
+					println("")
+				}
+    		file.Close()
+				
 				return nil,err
 		}
 
@@ -683,7 +694,7 @@ func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err erro
 	// If the fileData is already known, discard it
 	hash := fd.TxHash
 	if fp.all.Get(hash) != nil {
-		log.Trace("Discarding already known transaction", "hash", hash)
+		log.Trace("Discarding already known fileData", "hash", hash)
 		knownFdMeter.Mark(1)
 		return false, ErrAlreadyKnown
 	}
@@ -703,7 +714,7 @@ func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err erro
 // journalFd adds the specified fileData to the local disk journal if it is
 // deemed to have been sent from a local account.
 func (fp *FilePool) journalFd(txHash common.Hash, fd *types.FileData) {
-	// Only journal if it's enabled and the transaction is local
+	// Only journal if it's enabled and the fileData is local
 	_, flag := fp.collector[txHash]
 	if fp.journal == nil || (!fp.config.JournalRemote && !flag) {
 		return
@@ -740,7 +751,7 @@ func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) er
 	if err != nil {
 		return errors.New("GenerateDataCommit failed")
 	}
-	
+
 	fixedArray := digst.Bytes()
   slice := fixedArray[:]
 	if bytes.Equal(slice, fd.Commitment) {
@@ -830,7 +841,7 @@ func (t *lookup) Slots() int {
 }
 
 
-// Remove removes a transaction from the lookup.
+// Remove removes a fileData from the lookup.
 func (t *lookup) Remove(hash common.Hash) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
