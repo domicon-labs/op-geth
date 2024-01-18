@@ -738,8 +738,9 @@ func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) er
 	if len(fd.SignData) == 0  {
 		return errors.New("fileData signature is empty")
 	}
-	recover,err := types.FdSender(fp.signer,fd)
-	if err != nil || recover != fd.Sender {
+	recoverAddr,err := types.FdSender(fp.signer,fd)
+	if err != nil || bytes.Equal(recoverAddr.Bytes(),fd.Sender.Bytes()) {
+		log.Info("validateFileDataSignature----","recover",recoverAddr.Hex(),"sender",fd.Sender.Hex())
 		return errors.New("signature is invalid")
 	}
 	
