@@ -191,6 +191,16 @@ func WriteTransitionStatus(db ethdb.KeyValueWriter, data []byte) {
 	}
 }
 
+func WriteCommitToHash(db ethdb.KeyValueWriter,comm []byte,txHash common.Hash) {
+	if err := db.Put(fdLookupComKey(comm),txHash.Bytes()); err != nil {
+		log.Error("Failed to store the fileData ")
+	}
+}
+
+func ReadCommitToHash(db ethdb.KeyValueReader,comm []byte) ([]byte,error) {
+	data,err := db.Get(fdLookupComKey(comm))
+	return data,err
+}
 
 func WriteFileDataDetail(db ethdb.KeyValueWriter,data []byte,txHash common.Hash) {
 	if err := db.Put(fdLookupKey(txHash),data); err != nil {

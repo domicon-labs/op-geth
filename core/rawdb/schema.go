@@ -106,6 +106,7 @@ var (
 
 	txLookupPrefix        = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
 	fdLookupPrefix        = []byte("f") // fdLookupPrefix + hash -> fileData DiskSaved lookup metadata
+	fdLookupComPrefix		  = []byte("fc") // fdLookupComPrefix + Commitment -> hash to find file Data
 	bloomBitsPrefix       = []byte("B") // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
 	SnapshotAccountPrefix = []byte("a") // SnapshotAccountPrefix + account hash -> account trie value
 	SnapshotStoragePrefix = []byte("o") // SnapshotStoragePrefix + account hash + storage hash -> storage trie value
@@ -216,6 +217,11 @@ func txLookupKey(hash common.Hash) []byte {
 func fdLookupKey(hash common.Hash) []byte {
 	return append(fdLookupPrefix,hash.Bytes()...)
 }
+
+// fdLookupComKey = fdLookupComPrefix + commient
+func fdLookupComKey(comm []byte) []byte {
+	return append(fdLookupComPrefix,comm...)
+} 
 
 // accountSnapshotKey = SnapshotAccountPrefix + hash
 func accountSnapshotKey(hash common.Hash) []byte {

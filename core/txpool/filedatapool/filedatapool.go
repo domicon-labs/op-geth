@@ -236,7 +236,8 @@ func (fp *FilePool) loop() {
 			if err != nil {
 				continue
 			}
-			err = rlp.DecodeBytes(data,&detail)
+		
+			err = json.Unmarshal(data,&detail)
 			if err == nil {
 				if detail.TimeRecord.Before(time.Now().Add(3*24*time.Hour)) {
 					detail.State = DISK_FILEDATA_STATE_DEL
@@ -478,7 +479,7 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	}
 	diskDb := fp.currentState.Database().DiskDB()
 	detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
-	data,_ := rlp.EncodeToBytes(detail)
+	data,_ := json.Marshal(detail)
 	rawdb.WriteFileDataDetail(diskDb,data,hash)
 	fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 	log.Info("SaveFileDataToDisk----","txHash",hash.String())
@@ -511,11 +512,12 @@ func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common
 	for _,hash := range hashes {
 		fd := fp.all.collector[hash]
 		detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fd}
-		data,err := rlp.EncodeToBytes(detail)
+		data,err := json.Marshal(detail)
 		if err != nil {
 			log.Info("SaveBatchFileDatasToDisk-----EncodeToBytes bantch","err",err.Error())
 		}
 		rawdb.WriteFileDataDetail(db,data,hash)
+		rawdb.WriteCommitToHash(db,fd.Commitment,fd.TxHash)
 		fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 		fp.removeFileData(hash)
 	}
@@ -578,7 +580,7 @@ Lable:
 
 		if len(data) > 0 {
 			var detail DiskDetail
-			err := rlp.DecodeBytes(data,&detail) 
+			err := json.Unmarshal(data,&detail)
 			if err != nil {
 				return nil,err
 			}
