@@ -116,8 +116,8 @@ func newHashCollect() *HashCollect{
 type FilePool struct {
 	config          Config
 	chainconfig     *params.ChainConfig
-	chain           BlockChain
-	fileDataFeed    event.Feed
+	chain            BlockChain
+	fileDataFeed     event.Feed
 	fileDataHashFeed event.Feed
 	mu              sync.RWMutex
 	currentHead     atomic.Pointer[types.Header] // Current head of the blockchain
@@ -548,7 +548,10 @@ Lable:
 	if fd == nil {
 		diskDb := fp.currentState.Database().DiskDB()
 		data,err := rawdb.ReadFileDataDetail(diskDb,hash)
-		if err != nil || len(data) == 0{
+		if err != nil {
+				log.Info("FilePool 读取磁盘失败","err",err.Error())
+		}
+		if len(data) == 0{
 				log.Info("本地节点没有从需要从远端要--------","hash",hash.String())
 				if getTimes < 1 {
 					fp.fileDataHashFeed.Send(core.FileDataHashEvent{Hashes: []common.Hash{hash}})
@@ -565,7 +568,7 @@ Lable:
 				str := fmt.Sprintf("can not find fileData by TxHash is： %s time to ask ： %s",hash.Hex(),time.Now().String())
 				writeStr := str + "\n"
 				if _, err := file.WriteString(writeStr); err != nil {
-					println("")
+					log.Info("WriteString unknowTxHash err",err.Error())
 				}
     		file.Close()
 				

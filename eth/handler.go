@@ -718,10 +718,12 @@ func (h *handler) GetFileDatasFileData(hashs []common.Hash){
 	for _,hash := range hashs {
 		log.Info("GetFileDatasFileData---","需要找的",hash.String())
 		peers := h.peers.peersToGetFileData()
-		num := len(peers)/2
-		// For the remaining peers, send announcement only
-		for _, peer := range peers[num:] {	
-			annos[peer] = append(annos[peer], hash)
+		for _, peer := range peers[:] {	
+			//向知道的节点索取
+		  flag :=	peer.KnownFileData(hash)
+			if flag {
+				annos[peer] = append(annos[peer], hash)
+			}
 		}
 	}
 	for peer, hashes := range annos {
