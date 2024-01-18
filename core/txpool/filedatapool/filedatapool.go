@@ -2,6 +2,7 @@ package filedatapool
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -759,6 +760,9 @@ func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) er
 	fixedArray := digst.Bytes()
   slice := fixedArray[:]
 	if bytes.Equal(slice, fd.Commitment) {
+		generateCommit := hex.EncodeToString(slice)
+		orginCommit := hex.EncodeToString(fd.Commitment)
+		log.Info("validateFileDataSignature---Commitment","generateCommit",generateCommit,"orginCommit",orginCommit)
 		return errors.New("commitment is not match the data")
 	}	
 
