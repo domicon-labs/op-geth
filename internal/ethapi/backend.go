@@ -89,6 +89,7 @@ type Backend interface {
 	UploadFileData(data []byte) error
 	CheckSelfState(blockNr rpc.BlockNumber) (bool,error)
 	GetFileDataByHash(hash common.Hash) (*types.FileData, error)
+	GetFileDataByCommitment(comimt []byte) (*types.FileData, error)
 	DiskSaveFileDataWithHash(hash common.Hash) (bool, error)
 	DiskSaveFileDatas(hashes []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) (bool, error)
 	BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, []error)

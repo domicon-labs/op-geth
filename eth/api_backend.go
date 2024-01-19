@@ -325,6 +325,15 @@ func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, er
 	return nil, err
 }
 
+func (b *EthAPIBackend) GetFileDataByCommitment(comimt []byte) (*types.FileData, error) {
+	fd,err := b.eth.fdPool.GetByCommitment(comimt)
+	log.Info("EthAPIBackend-----GetFileDataByCommitment", "comimt", common.Bytes2Hex(comimt))
+	if fd != nil {
+		return fd, nil
+	}
+	return nil, err
+}
+
 func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
 	bc := b.eth.BlockChain()
   block := bc.GetBlockByNumber(uint64(blockNr))

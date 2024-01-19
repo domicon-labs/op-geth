@@ -1922,6 +1922,16 @@ func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error) {
 	return rpcFd,nil
 }
 
+func (f *FileDataAPI) GetFileDataByCommitment(comimt []byte) (*RPCFileData,error) {
+	str := hex.EncodeToString(comimt)
+	log.Info("FileDataAPI----","GetFileDataByCommitment---called--comimt",str)
+	fd,err := f.b.GetFileDataByCommitment(comimt)
+	if err != nil {
+		return nil,err
+	}
+	rpcFd := NewRPCFileData(fd)
+	return rpcFd,nil
+}
 
 func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
 	flag,err :=	f.b.DiskSaveFileDataWithHash(hash)

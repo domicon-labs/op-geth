@@ -323,6 +323,14 @@ func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFi
 	return fd,err
 }
 
+func (ec *Client) GetFileDataByCommitment(ctx context.Context,comimt []byte) (RPCFileData, error) {
+	var fd RPCFileData
+	log.Info("client---GetFileDataByCommitment---iscalling---")
+	err := ec.c.CallContext(ctx,&fd,"eth_getFileDataByCommitment",comimt)
+	return fd,err
+}
+
+
 func (ec *Client) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (bool,error) {
 	var flag bool
 	err := ec.c.CallContext(ctx,&flag,"eth_checkSelfState",blockNr.String()) 

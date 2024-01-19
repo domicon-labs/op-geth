@@ -245,6 +245,10 @@ func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData, error)
 	return nil, nil
 }
 
+func (*backendMock) GetFileDataByCommitment(comimt []byte) (*types.FileData, error) {
+	return nil, nil
+}
+
 func (* backendMock) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
 	return true,nil
 }
