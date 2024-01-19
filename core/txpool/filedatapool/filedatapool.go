@@ -319,6 +319,7 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 }
 
 func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common.Hash,blcNr uint64) (bool,error) {
+	log.Info("SaveBatchFileDatasToDisk----","hashes length",len(hashes),"block num",blcNr,"blcHash",blcHash.Hex())	
 	list := make([]*types.FileData,0)
 	for _,hash := range hashes {
 		fd, ok := fp.all.collector[hash]
