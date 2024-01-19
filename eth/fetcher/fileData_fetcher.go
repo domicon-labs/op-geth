@@ -514,8 +514,7 @@ func (f *FileDataFetcher) loop() {
 						if meta := fdset[hash]; meta != nil {
 							 if delivery.metas[i].size != meta.size {
 								if math.Abs(float64(delivery.metas[i].size)-float64(meta.size)) > 8 {
-									log.Warn("Announced transaction size mismatch", "peer", peer, "tx", hash, "size", delivery.metas[i].size, "ann", meta.size)
-
+									log.Warn("Announced fileData size mismatch", "peer", peer, "tx", hash, "size", delivery.metas[i].size, "ann", meta.size)
 									// Normally we should drop a peer considering this is a protocol violation.
 									// However, due to the RLP vs consensus format messyness, allow a few bytes
 									// wiggle-room where we only warn, but don't drop.
@@ -580,7 +579,7 @@ func (f *FileDataFetcher) loop() {
 				// Make sure something was pending, nuke it
 				req := f.requests[delivery.origin]
 				if req == nil {
-					log.Warn("Unexpected transaction delivery", "peer", delivery.origin)
+					log.Warn("Unexpected fileData delivery", "peer", delivery.origin)
 					break
 				}
 				delete(f.requests, delivery.origin)

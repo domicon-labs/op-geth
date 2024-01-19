@@ -339,11 +339,19 @@ func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
   block := bc.GetBlockByNumber(uint64(blockNr))
 	db := b.eth.chainDb
 	res := make([]*types.FileData, 0)
+	var totalCount uint64
 	log.Info("EthAPIBackend-----CheckSelfState", "blockNr", block.Number().Uint64())
 	if block != nil {
 		for i := 1; i < int(block.NumberU64()); i++ {
 			currentNum := i
 			currentBlock := bc.GetBlockByNumber(uint64(currentNum))
+			txs := currentBlock.Body().Transactions
+			for i := 0; i < len(txs); i++ {
+				tx := txs[i]
+				if tx.Type() == types.SubmitTxType {
+					totalCount+=1
+				}
+			}
 			headHash := currentBlock.Hash()
 			fds := rawdb.ReadFileDatas(db,headHash,uint64(currentNum))
 			if len(fds)!= 0 {
@@ -352,10 +360,11 @@ func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
 		}
 	}
 
-	if len(res) != 0 {
+	if len(res) == int(totalCount) {
 		return true,nil
 	}
-	return false,nil
+	errStr := fmt.Sprintf("check goal block number is :%d should have:%d local data have:%d",blockNr.Int64(),int(totalCount),len(res))
+	return false,errors.New(errStr)
 }
 
 func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
