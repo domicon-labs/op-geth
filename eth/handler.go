@@ -719,11 +719,11 @@ func (h *handler) GetFileDatasFileData(hashs []common.Hash){
 		log.Info("GetFileDatasFileData---","需要找的",hash.String())
 		peers := h.peers.peersToGetFileData()
 		for _, peer := range peers[:] {	
-			//向知道的节点索取
-		  flag :=	peer.KnownFileData(hash)
-			if flag {
-				annos[peer] = append(annos[peer], hash)
-			}
+				//向非同步的节点索取
+			  // mod,_ :=	h.chainSync.modeAndLocalHead()
+				// if mod != downloader.FullSync {
+					annos[peer] = append(annos[peer], hash)
+				// }
 		}
 	}
 	for peer, hashes := range annos {
