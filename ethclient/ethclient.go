@@ -331,10 +331,10 @@ func (ec *Client) GetFileDataByCommitment(ctx context.Context,comimt []byte) (RP
 }
 
 
-func (ec *Client) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (bool,error) {
-	var flag bool
-	err := ec.c.CallContext(ctx,&flag,"eth_checkSelfState",blockNr.String()) 
-	return flag,err
+func (ec *Client) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (string,error) {
+	var str string
+	err := ec.c.CallContext(ctx,&str,"eth_checkSelfState",blockNr.String()) 
+	return str,err
 }
 
 func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context,hashes rpc.TxHashes) (bool,error){

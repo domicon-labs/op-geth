@@ -249,8 +249,8 @@ func (*backendMock) GetFileDataByCommitment(comimt []byte) (*types.FileData, err
 	return nil, nil
 }
 
-func (* backendMock) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
-	return true,nil
+func (* backendMock) CheckSelfState(blockNr rpc.BlockNumber) (string,error) {
+	return "true",nil
 }
 
 func (*backendMock) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {

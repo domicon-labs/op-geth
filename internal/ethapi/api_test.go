@@ -644,8 +644,8 @@ func (b testBackend) GetFileDataByCommitment(comimt []byte) (*types.FileData, er
 	return nil, nil
 }
 
-func (b testBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
-	return true,nil
+func (b testBackend) CheckSelfState(blockNr rpc.BlockNumber) (string,error) {
+	return "",nil
 }
 
 // BatchFileDataByHashes implements Backend.

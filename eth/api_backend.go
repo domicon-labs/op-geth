@@ -334,7 +334,7 @@ func (b *EthAPIBackend) GetFileDataByCommitment(comimt []byte) (*types.FileData,
 	return nil, err
 }
 
-func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
+func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (string,error) {
 	bc := b.eth.BlockChain()
   block := bc.GetBlockByNumber(uint64(blockNr))
 	db := b.eth.chainDb
@@ -360,11 +360,12 @@ func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
 		}
 	}
 
+	infoStr := fmt.Sprintf("check goal block number is :%d should have:%d local data have:%d",blockNr.Int64(),int(totalCount),len(res))
 	if len(res) == int(totalCount) {
-		return true,nil
+		return infoStr,nil
 	}
-	errStr := fmt.Sprintf("check goal block number is :%d should have:%d local data have:%d",blockNr.Int64(),int(totalCount),len(res))
-	return false,errors.New(errStr)
+	
+	return infoStr,errors.New("dont have full fileDatas with local node")
 }
 
 func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {

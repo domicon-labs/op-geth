@@ -1896,7 +1896,7 @@ func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
 }
 
-func (f *FileDataAPI) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (bool,error) {
+func (f *FileDataAPI) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (string,error) {
 	return f.b.CheckSelfState(blockNr)
 }
 

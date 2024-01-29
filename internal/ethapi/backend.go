@@ -87,7 +87,7 @@ type Backend interface {
 	// FileData pool API
 	UploadFileDataByParams(sender, submitter common.Address, index, length, gasPrice uint64, commitment, data, signData []byte, txHash common.Hash) error
 	UploadFileData(data []byte) error
-	CheckSelfState(blockNr rpc.BlockNumber) (bool,error)
+	CheckSelfState(blockNr rpc.BlockNumber) (string,error)
 	GetFileDataByHash(hash common.Hash) (*types.FileData, error)
 	GetFileDataByCommitment(comimt []byte) (*types.FileData, error)
 	DiskSaveFileDataWithHash(hash common.Hash) (bool, error)
@@ -95,6 +95,7 @@ type Backend interface {
 	BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool, []error)
 	ChangeCurrentState(state int, number rpc.BlockNumber) bool
 	SubscribeNewFileDataEvent(chan<- core.NewFileDataEvent) event.Subscription
+	
 	ChainConfig() *params.ChainConfig
 	Engine() consensus.Engine
 	HistoricalRPCService() *rpc.Client
