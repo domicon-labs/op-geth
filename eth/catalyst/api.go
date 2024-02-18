@@ -436,11 +436,11 @@ func (api *ConsensusAPI) ExchangeTransitionConfigurationV1(config engine.Transit
 }
 
 //upload fileData
-func (api *ConsensusAPI) UploadFileData(sender common.Address,submmiter common.Address,index uint64,length uint64,data []byte,commit []byte,sign []byte,txHash common.Hash) (flag bool,err error) { 
+func (api *ConsensusAPI) UploadFileData(sender common.Address,submitter common.Address,index uint64,length uint64,data []byte,commit []byte,sign []byte,txHash common.Hash) (flag bool,err error) { 
 	
 	fd := &types.FileData{
 		Sender: sender,
-		Submitter: submmiter,
+		Submitter: submitter,
 		Index: index,
 		Length: length,
 		Data: data,

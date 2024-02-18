@@ -1545,7 +1545,7 @@ func (s *BlockChainAPI) rpcMarshalBlock(ctx context.Context, b *types.Block, inc
 // RPCFileData represents a fileData that will serialize to the RPC representation of a fileData
 type RPCFileData struct {
 	Sender         common.Address   `json:"sender"`
-	Submmiter      common.Address	`json:"submmiter"`
+	Submitter      common.Address	`json:"submitter"`
 	Length         hexutil.Uint64	`json:"length"`
 	Index          hexutil.Uint64	`json:"index"`
 	Commitment     hexutil.Bytes    `json:"commitment"`
@@ -1557,7 +1557,7 @@ type RPCFileData struct {
 func NewRPCFileData(fd *types.FileData) *RPCFileData{
 	result := &RPCFileData{
 		Sender: 	fd.Sender,
-		Submmiter:  fd.Submitter,
+		Submitter:  fd.Submitter,
 		Length:     hexutil.Uint64(fd.Length),
 		Index: 		hexutil.Uint64(fd.Index),
 		Commitment: hexutil.Bytes(fd.Commitment),
