@@ -48,6 +48,11 @@ type LesApiBackend struct {
 	gpo                 *gasprice.Oracle
 }
 
+// GetFileDataByCommitment implements ethapi.Backend.
+func (*LesApiBackend) GetFileDataByCommitment(comimt []byte) (*types.FileData, error) {
+	panic("unimplemented")
+}
+
 // ChangeCurrentState implements ethapi.Backend.
 func (*LesApiBackend) ChangeCurrentState(state int, number rpc.BlockNumber) bool {
 	panic("unimplemented")
@@ -62,16 +67,16 @@ func (*LesApiBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	panic("unimplemented")
 }
 
-func (*LesApiBackend) DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
-	return true,nil
+func (*LesApiBackend) DiskSaveFileDatas(hashed []common.Hash, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+	return true, nil
 }
 
 func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
 	panic("unimplemented")
 }
 
-func (* LesApiBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
-	return true,nil
+func (*LesApiBackend) CheckSelfState(blockNr rpc.BlockNumber) (string, error) {
+	return "true", nil
 }
 
 // GetFileDataByHash implements ethapi.Backend.
@@ -90,7 +95,7 @@ func (*LesApiBackend) UploadFileData(data []byte) error {
 }
 
 // UploadFileDataByParams implements ethapi.Backend.
-func (*LesApiBackend) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, gasPrice uint64,commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
+func (*LesApiBackend) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, gasPrice uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
 	panic("unimplemented")
 }
 

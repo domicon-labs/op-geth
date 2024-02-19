@@ -1545,7 +1545,7 @@ func (s *BlockChainAPI) rpcMarshalBlock(ctx context.Context, b *types.Block, inc
 // RPCFileData represents a fileData that will serialize to the RPC representation of a fileData
 type RPCFileData struct {
 	Sender         common.Address   `json:"sender"`
-	Submmiter      common.Address	`json:"submmiter"`
+	Submitter      common.Address	`json:"submitter"`
 	Length         hexutil.Uint64	`json:"length"`
 	Index          hexutil.Uint64	`json:"index"`
 	Commitment     hexutil.Bytes    `json:"commitment"`
@@ -1557,7 +1557,7 @@ type RPCFileData struct {
 func NewRPCFileData(fd *types.FileData) *RPCFileData{
 	result := &RPCFileData{
 		Sender: 	fd.Sender,
-		Submmiter:  fd.Submitter,
+		Submitter:  fd.Submitter,
 		Length:     hexutil.Uint64(fd.Length),
 		Index: 		hexutil.Uint64(fd.Index),
 		Commitment: hexutil.Bytes(fd.Commitment),
@@ -1896,7 +1896,7 @@ func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
 }
 
-func (f *FileDataAPI) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (bool,error) {
+func (f *FileDataAPI) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (string,error) {
 	return f.b.CheckSelfState(blockNr)
 }
 
@@ -1922,6 +1922,16 @@ func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error) {
 	return rpcFd,nil
 }
 
+func (f *FileDataAPI) GetFileDataByCommitment(comimt []byte) (*RPCFileData,error) {
+	str := hex.EncodeToString(comimt)
+	log.Info("FileDataAPI----","GetFileDataByCommitment---called--comimt",str)
+	fd,err := f.b.GetFileDataByCommitment(comimt)
+	if err != nil {
+		return nil,err
+	}
+	rpcFd := NewRPCFileData(fd)
+	return rpcFd,nil
+}
 
 func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
 	flag,err :=	f.b.DiskSaveFileDataWithHash(hash)

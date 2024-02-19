@@ -325,16 +325,33 @@ func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, er
 	return nil, err
 }
 
-func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
+func (b *EthAPIBackend) GetFileDataByCommitment(comimt []byte) (*types.FileData, error) {
+	fd,err := b.eth.fdPool.GetByCommitment(comimt)
+	log.Info("EthAPIBackend-----GetFileDataByCommitment", "comimt", common.Bytes2Hex(comimt))
+	if fd != nil {
+		return fd, nil
+	}
+	return nil, err
+}
+
+func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (string,error) {
 	bc := b.eth.BlockChain()
   block := bc.GetBlockByNumber(uint64(blockNr))
 	db := b.eth.chainDb
 	res := make([]*types.FileData, 0)
+	var totalCount uint64
 	log.Info("EthAPIBackend-----CheckSelfState", "blockNr", block.Number().Uint64())
 	if block != nil {
 		for i := 1; i < int(block.NumberU64()); i++ {
 			currentNum := i
 			currentBlock := bc.GetBlockByNumber(uint64(currentNum))
+			txs := currentBlock.Body().Transactions
+			for i := 0; i < len(txs); i++ {
+				tx := txs[i]
+				if tx.Type() == types.SubmitTxType {
+					totalCount+=1
+				}
+			}
 			headHash := currentBlock.Hash()
 			fds := rawdb.ReadFileDatas(db,headHash,uint64(currentNum))
 			if len(fds)!= 0 {
@@ -343,10 +360,12 @@ func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (bool,error) {
 		}
 	}
 
-	if len(res) != 0 {
-		return true,nil
+	infoStr := fmt.Sprintf("check goal block number is :%d should have:%d local data have:%d",blockNr.Int64(),int(totalCount),len(res))
+	if len(res) == int(totalCount) {
+		return infoStr,nil
 	}
-	return false,nil
+	
+	return infoStr,errors.New("dont have full fileDatas with local node")
 }
 
 func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {

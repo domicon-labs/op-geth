@@ -218,7 +218,7 @@ func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 
 type RPCFileData struct {
 	Sender         common.Address   `json:"sender"`
-	Submmiter      common.Address		`json:"submmiter"`
+	Submitter      common.Address		`json:"submitter"`
 	Length         hexutil.Uint64		`json:"length"`
 	Index          hexutil.Uint64		`json:"index"`
 	Commitment     hexutil.Bytes    `json:"commitment"`	
@@ -304,9 +304,9 @@ func (ec *Client) UploadFileData(ctx context.Context,data []byte) error {
 
 }
 
-func (ec *Client) UploadFileDataByParams(ctx context.Context,sender common.Address,submetter common.Address,index uint64,length uint64,gasprice uint64,data []byte,commitment []byte,sign []byte,txHash common.Hash) error {
+func (ec *Client) UploadFileDataByParams(ctx context.Context,sender common.Address,submitter common.Address,index uint64,length uint64,gasprice uint64,data []byte,commitment []byte,sign []byte,txHash common.Hash) error {
 	var err error
-	tmpErr := ec.c.CallContext(ctx,&err,"eth_uploadFileDataByParams",sender,submetter,index,length,gasprice,data,commitment,sign,txHash) 
+	tmpErr := ec.c.CallContext(ctx,&err,"eth_uploadFileDataByParams",sender,submitter,index,length,gasprice,data,commitment,sign,txHash) 
 	return tmpErr
 }
 
@@ -323,10 +323,18 @@ func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFi
 	return fd,err
 }
 
-func (ec *Client) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (bool,error) {
-	var flag bool
-	err := ec.c.CallContext(ctx,&flag,"eth_checkSelfState",blockNr.String()) 
-	return flag,err
+func (ec *Client) GetFileDataByCommitment(ctx context.Context,comimt []byte) (RPCFileData, error) {
+	var fd RPCFileData
+	log.Info("client---GetFileDataByCommitment---iscalling---")
+	err := ec.c.CallContext(ctx,&fd,"eth_getFileDataByCommitment",comimt)
+	return fd,err
+}
+
+
+func (ec *Client) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (string,error) {
+	var str string
+	err := ec.c.CallContext(ctx,&str,"eth_checkSelfState",blockNr.String()) 
+	return str,err
 }
 
 func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context,hashes rpc.TxHashes) (bool,error){

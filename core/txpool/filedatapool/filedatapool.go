@@ -2,6 +2,7 @@ package filedatapool
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -116,8 +117,8 @@ func newHashCollect() *HashCollect{
 type FilePool struct {
 	config          Config
 	chainconfig     *params.ChainConfig
-	chain           BlockChain
-	fileDataFeed    event.Feed
+	chain            BlockChain
+	fileDataFeed     event.Feed
 	fileDataHashFeed event.Feed
 	mu              sync.RWMutex
 	currentHead     atomic.Pointer[types.Header] // Current head of the blockchain
@@ -235,7 +236,8 @@ func (fp *FilePool) loop() {
 			if err != nil {
 				continue
 			}
-			err = rlp.DecodeBytes(data,&detail)
+		
+			err = json.Unmarshal(data,&detail)
 			if err == nil {
 				if detail.TimeRecord.Before(time.Now().Add(3*24*time.Hour)) {
 					detail.State = DISK_FILEDATA_STATE_DEL
@@ -285,6 +287,424 @@ func removeElement(arr []common.Hash, index int) []common.Hash {
 	arr[index] = arr[len(arr)-1]
 	return arr[:len(arr)-1]
 }
+
+// SubscribeFileDatas registers a subscription for new FileData events,
+// supporting feeding only newly seen or also resurrected FileData.
+func (fp *FilePool) SubscribenFileDatas(ch chan<- core.NewFileDataEvent) event.Subscription {
+	// The legacy pool has a very messed up internal shuffling, so it's kind of
+	// hard to separate newly discovered fileData from resurrected ones. This
+	// is because the new fileDatas are added to , resurrected ones too and
+	// reorgs run lazily, so separating the two would need a marker.
+	return fp.fileDataFeed.Subscribe(ch)
+}
+
+// SubscribenFileDatasHash registers a subscription for get unknow fileData by txHash.
+func (fp *FilePool) SubscribenFileDatasHash(ch chan<- core.FileDataHashEvent) event.Subscription {
+	return fp.fileDataHashFeed.Subscribe(ch)
+}
+
+func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
+	fileData, ok := fp.all.collector[hash]
+	if !ok {
+		return errors.New("file pool dont have fileData")
+	}
+	diskDb := fp.currentState.Database().DiskDB()
+	detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
+	data,_ := json.Marshal(detail)
+	rawdb.WriteFileDataDetail(diskDb,data,hash)
+	fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
+	log.Info("SaveFileDataToDisk----","txHash",hash.String())
+	fp.removeFileData(hash)
+	return nil
+}
+
+func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common.Hash,blcNr uint64) (bool,error) {
+	log.Info("SaveBatchFileDatasToDisk----","hashes length",len(hashes),"block num",blcNr,"blcHash",blcHash.Hex())	
+	list := make([]*types.FileData,0)
+	for _,hash := range hashes {
+		fd, ok := fp.all.collector[hash]
+		if !ok {
+			return false,errors.New("don not have that fileDATA")
+		}
+		block := fp.chain.GetBlock(blcHash,blcNr)
+		if block == nil {
+			return false,nil
+		}
+		list = append(list, fd)
+		state,err := fp.chain.StateAt(block.Header().Root)
+		if err == nil {
+			fp.currentState = state
+			fp.currentHead.Store(block.Header())
+		}
+	}
+
+	db := fp.currentState.Database().DiskDB()
+	rawdb.WriteFileDatas(db,blcHash,blcNr,list)
+	
+	for _,hash := range hashes {
+		fd := fp.all.collector[hash]
+		detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fd}
+		data,err := json.Marshal(detail)
+		if err != nil {
+			log.Info("SaveBatchFileDatasToDisk-----EncodeToBytes bantch","err",err.Error())
+		}
+		rawdb.WriteFileDataDetail(db,data,hash)
+		rawdb.WriteCommitToHash(db,fd.Commitment,fd.TxHash)
+		fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
+		fp.removeFileData(hash)
+	}
+	return true,nil
+}
+
+func (fp *FilePool) removeFileData(hash common.Hash) error {
+	fd := fp.all.Get(hash)
+	if fd == nil {
+		return errors.New("fileData with that fd hash not exist")
+	}
+	delete(fp.beats, hash)
+	fp.all.Remove(hash)
+	delete(fp.collector, hash)
+	return nil
+}
+
+// cached with the given hash.
+func (fp *FilePool) Has(hash common.Hash) bool{
+	fd := fp.get(hash)
+	return fd != nil
+}
+
+func (fp *FilePool) GetByCommitment(comimt []byte) (*types.FileData,error){
+	diskDb := fp.currentState.Database().DiskDB()
+	hashData,err := rawdb.ReadCommitToHash(diskDb,comimt)
+	if err != nil && len(hashData) == 0 {
+		log.Info("GetByCommitment---err","comimt",&comimt)
+		return nil,errors.New("dont have that commit")
+	}
+
+	hash := common.BytesToHash(hashData)
+	return fp.Get(hash)
+}  
+
+
+// Get retrieves the fileData from local fileDataPool with given
+// tx hash.
+func (fp *FilePool) Get(hash common.Hash) (*types.FileData,error){
+	var getTimes uint64
+Lable:
+	fd := fp.get(hash)
+	if fd == nil {
+		diskDb := fp.currentState.Database().DiskDB()
+		data,err := rawdb.ReadFileDataDetail(diskDb,hash)
+		if err != nil {
+				log.Info("FilePool 读取磁盘失败","err",err.Error())
+		}
+		if len(data) == 0{
+				log.Info("本地节点没有从需要从远端要--------","hash",hash.String())
+				if getTimes < 1 {
+					fp.fileDataHashFeed.Send(core.FileDataHashEvent{Hashes: []common.Hash{hash}})
+					log.Info("本地节点没有从需要从远端要---进来了么")
+				}
+				time.Sleep(200 * time.Millisecond)
+				getTimes ++
+				if getTimes <= 1 {
+					goto Lable
+				}
+
+				currentPath, _ := os.Getwd()
+				file, err := os.OpenFile(currentPath+"/unknowTxHash.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+				str := fmt.Sprintf("can not find fileData by TxHash is： %s time to ask ： %s",hash.Hex(),time.Now().String())
+				writeStr := str + "\n"
+				if _, err := file.WriteString(writeStr); err != nil {
+					log.Info("WriteString unknowTxHash err",err.Error())
+				}
+    		file.Close()
+				
+				return nil,err
+		}
+
+		if len(data) > 0 {
+			var detail DiskDetail
+			err := json.Unmarshal(data,&detail)
+			if err != nil {
+				return nil,err
+			}
+			if detail.State == DISK_FILEDATA_STATE_DEL {
+				return nil,errors.New("fileData already del")
+			}
+			return &detail.Data,nil
+		}
+	}
+	return fd,nil
+}
+
+
+// get returns a fileData if it is contained in the pool and nil otherwise.
+func (fp *FilePool) get(hash common.Hash) *types.FileData {
+	return fp.all.Get(hash)
+}
+
+
+// addRemotesSync is like addRemotes, but waits for pool reorganization. Tests use this method.
+func (fp *FilePool) addRemotesSync(fds []*types.FileData) []error {
+	return fp.Add(fds, false, true)
+}
+
+// toJournal retrieves all FileData that should be included in the journal,
+// grouped by origin account and sorted by nonce.
+// The returned FileData set is a copy and can be freely modified by calling code.
+func (fp *FilePool) toJournal() map[common.Hash]*types.FileData {
+	fds := make(map[common.Hash]*types.FileData)
+	for hash, fd := range fp.collector {
+		fds[hash] = fd
+	}
+	return fds
+}
+
+// addLocals enqueues a batch of FileData into the pool if they are valid, marking the
+// senders as local ones, ensuring they go around the local pricing constraints.
+//
+// This method is used to add FileData from the RPC API and performs synchronous pool
+// reorganization and event propagation.
+func (fp *FilePool) addLocals(fds []*types.FileData) []error {
+	return fp.Add(fds, true, true)
+}
+
+// Add enqueues a batch of FileData into the pool if they are valid. Depending
+// on the local flag, full pricing constraints will or will not be applied.
+//
+// If sync is set, the method will block until all internal maintenance related
+// to the add is finished. Only use this during tests for determinism!
+func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
+	// Filter out known ones without obtaining the pool lock or recovering signatures
+	var (
+		errs = make([]error, len(fds))
+		news = make([]*types.FileData, 0, len(fds))
+	)
+	for i, fd := range fds {
+		// If the fileData is known, pre-set the error slot
+		if fp.all.Get(fd.TxHash) != nil {
+			errs[i] = ErrAlreadyKnown
+			knownFdMeter.Mark(1)
+			continue
+		}
+
+		txHash := fd.TxHash.String()
+
+		log.Info("FilePool----Add","txHash",txHash)
+		// Exclude fileDatas with basic errors, e.g invalid signatures
+		if err := fp.validateFileDataSignature(fd, local); err != nil {
+			errs[i] = err
+			invalidFdMeter.Mark(1)
+			continue
+		}
+		news = append(news, fd)
+	}
+	if len(news) == 0 {
+		return errs
+	}
+	
+	fp.mu.Lock()
+	newErrs := fp.addFdsLocked(news, local)
+	fp.mu.Unlock()
+
+	var nilSlot = 0
+	var final = make([]*types.FileData, 0)
+	for index, err := range newErrs {
+		if err == nil {
+			final = append(final,news[index])
+		}
+		for errs[nilSlot] != nil {
+			nilSlot++
+		}
+		errs[nilSlot] = err
+		nilSlot++
+	}
+
+	if len(final) != 0 {
+		fp.fileDataFeed.Send(core.NewFileDataEvent{Fileds: final})
+	}
+	return errs
+}
+
+// addFdsLocked attempts to queue a batch of FileDatas if they are valid.
+// The fileData pool lock must be held.
+func (fp *FilePool) addFdsLocked(fds []*types.FileData, local bool) []error {
+	errs := make([]error, len(fds))
+	for i, fd := range fds {
+		_, err := fp.add(fd, local)
+		errs[i] = err
+	}
+
+	return errs
+}
+
+// add validates a fileData and inserts it into the non-executable queue for later
+// saved. 
+func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err error) {
+	// If the fileData is already known, discard it
+	hash := fd.TxHash
+	if fp.all.Get(hash) != nil {
+		log.Trace("Discarding already known fileData", "hash", hash)
+		knownFdMeter.Mark(1)
+		return false, ErrAlreadyKnown
+	}
+
+	//
+	if uint64(fp.all.Slots()+1) > fp.config.GlobalSlots {
+		return false,ErrFdPoolOverflow
+	}
+
+	fp.journalFd(hash, fd)
+	fp.all.Add(fd)
+	fp.beats[hash] = time.Now()
+	log.Trace("Pooled new future transaction", "hash", hash)
+	return replaced, nil
+}
+
+// journalFd adds the specified fileData to the local disk journal if it is
+// deemed to have been sent from a local account.
+func (fp *FilePool) journalFd(txHash common.Hash, fd *types.FileData) {
+	// Only journal if it's enabled and the fileData is local
+	_, flag := fp.collector[txHash]
+	if fp.journal == nil || (!fp.config.JournalRemote && !flag) {
+		return
+	}
+	if err := fp.journal.insert(fd); err != nil {
+		log.Warn("Failed to journal local fileData", "err", err)
+	}
+}
+
+// validateFileDataSignature checks whether a fileData is valid according to the consensus
+// rules, but does not check state-dependent validation such as sufficient balance.
+// This check is meant as an early check which only needs to be performed once,
+// and does not require the pool mutex to be held.
+func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) error {
+	if fd.Length != uint64(len(fd.Data)) {
+		return errors.New("fileData data length not match legth")
+	}
+	if len(fd.SignData) == 0  {
+		return errors.New("fileData signature is empty")
+	}
+	recoverAddr,err := types.FdSender(fp.signer,fd)
+	if err != nil || bytes.Equal(recoverAddr.Bytes(),fd.Sender.Bytes()) {
+		log.Info("validateFileDataSignature----","recover",recoverAddr.Hex(),"sender",fd.Sender.Hex())
+		return errors.New("signature is invalid")
+	}
+	
+	currentPath, _ := os.Getwd()
+	path := strings.Split(currentPath,"/core")[0] + "/srs"
+	domiconSDK,err := kzg.InitDomiconSdk(dSrsSize,path)
+	if err != nil {
+		return err
+	}
+
+	digst,err := domiconSDK.GenerateDataCommit(fd.Data)
+	if err != nil {
+		return errors.New("GenerateDataCommit failed")
+	}
+
+	fixedArray := digst.Bytes()
+  slice := fixedArray[:]
+	if !bytes.Equal(slice, fd.Commitment) {
+		generateCommit := hex.EncodeToString(slice)
+		orginCommit := hex.EncodeToString(fd.Commitment)
+		log.Info("validateFileDataSignature---Commitment","generateCommit",generateCommit,"orginCommit",orginCommit)
+		return errors.New("commitment is not match the data")
+	}	
+
+	return nil
+}
+
+// Close terminates the fileData pool.
+func (fp *FilePool) Close() error {
+	// Terminate the pool reorger and return
+	close(fp.reorgShutdownCh)
+	fp.wg.Wait()
+
+	fp.subs.Close()
+
+	if fp.journal != nil {
+		fp.journal.close()
+	}
+	log.Info("FilePool pool stopped")
+	return nil
+}
+
+type lookup struct {
+	slots   int
+	lock      sync.RWMutex
+	collector map[common.Hash]*types.FileData
+}
+
+// newLookup returns a new lookup structure.
+func newLookup() *lookup {
+	return &lookup{
+		collector: make(map[common.Hash]*types.FileData),
+	}
+}
+
+// Range calls f on each key and value present in the map. The callback passed
+// should return the indicator whether the iteration needs to be continued.
+// Callers need to specify which set (or both) to be iterated.
+func (t *lookup) Range(f func(hash common.Hash, fd *types.FileData) bool) {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+	for key, value := range t.collector {
+		if !f(key, value) {
+			return
+		}
+	}
+}
+
+// Get returns a fileData if it exists in the lookup, or nil if not found.
+func (t *lookup) Get(hash common.Hash) *types.FileData {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	if fd := t.collector[hash]; fd != nil {
+		return fd
+	}
+	return nil
+}
+
+// Count returns the current number of FileData in the lookup.
+func (t *lookup) Count() int {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return len(t.collector)
+}
+
+// Add adds a fileData to the lookup.
+func (t *lookup) Add(fd *types.FileData) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	t.slots += 1
+	slotsGauge.Update(int64(t.slots))
+	log.Info("Add-----加进来了")
+	t.collector[fd.TxHash] = fd
+}
+
+// Slots returns the current number of slots used in the lookup.
+func (t *lookup) Slots() int {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return t.slots
+}
+
+
+// Remove removes a fileData from the lookup.
+func (t *lookup) Remove(hash common.Hash) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	t.slots -= 1
+	slotsGauge.Update(int64(t.slots))
+	delete(t.collector, hash)
+}
+
 
 // // scheduleReorgLoop schedules runs of reset and promoteExecutables. Code above should not
 // // call those methods directly, but request them being run using requestReset and
@@ -454,400 +874,3 @@ func removeElement(arr []common.Hash, index int) []common.Hash {
 // 	// core.SenderCacher.Recover(pool.signer, reinject)
 // 	// pool.addTxsLocked(reinject, false)
 // }
-
-// SubscribeFileDatas registers a subscription for new FileData events,
-// supporting feeding only newly seen or also resurrected FileData.
-func (fp *FilePool) SubscribenFileDatas(ch chan<- core.NewFileDataEvent) event.Subscription {
-	// The legacy pool has a very messed up internal shuffling, so it's kind of
-	// hard to separate newly discovered fileData from resurrected ones. This
-	// is because the new fileDatas are added to , resurrected ones too and
-	// reorgs run lazily, so separating the two would need a marker.
-	return fp.fileDataFeed.Subscribe(ch)
-}
-
-// SubscribenFileDatasHash registers a subscription for get unknow fileData by txHash.
-func (fp *FilePool) SubscribenFileDatasHash(ch chan<- core.FileDataHashEvent) event.Subscription {
-	return fp.fileDataHashFeed.Subscribe(ch)
-}
-
-func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
-	fileData, ok := fp.all.collector[hash]
-	if !ok {
-		return errors.New("file pool dont have fileData")
-	}
-	diskDb := fp.currentState.Database().DiskDB()
-	detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
-	data,_ := rlp.EncodeToBytes(detail)
-	rawdb.WriteFileDataDetail(diskDb,data,hash)
-	fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
-	log.Info("SaveFileDataToDisk----","txHash",hash.String())
-	fp.removeFileData(hash)
-	return nil
-}
-
-func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common.Hash,blcNr uint64) (bool,error) {
-	list := make([]*types.FileData,0)
-	for _,hash := range hashes {
-		fd, ok := fp.all.collector[hash]
-		if !ok {
-			return false,errors.New("don not have that fileDATA")
-		}
-		block := fp.chain.GetBlock(blcHash,blcNr)
-		if block == nil {
-			return false,nil
-		}
-		list = append(list, fd)
-		state,err := fp.chain.StateAt(block.Header().Root)
-		if err == nil {
-			fp.currentState = state
-			fp.currentHead.Store(block.Header())
-		}
-	}
-
-	db := fp.currentState.Database().DiskDB()
-	rawdb.WriteFileDatas(db,blcHash,blcNr,list)
-	
-	for _,hash := range hashes {
-		fd := fp.all.collector[hash]
-		detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fd}
-		data,err := rlp.EncodeToBytes(detail)
-		if err != nil {
-			log.Info("SaveBatchFileDatasToDisk-----EncodeToBytes bantch","err",err.Error())
-		}
-		rawdb.WriteFileDataDetail(db,data,hash)
-		fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
-		fp.removeFileData(hash)
-	}
-	return true,nil
-}
-
-func (fp *FilePool) removeFileData(hash common.Hash) error {
-	fd := fp.all.Get(hash)
-	if fd == nil {
-		return errors.New("fileData with that fd hash not exist")
-	}
-	delete(fp.beats, hash)
-	fp.all.Remove(hash)
-	delete(fp.collector, hash)
-	return nil
-}
-
-// cached with the given hash.
-func (fp *FilePool) Has(hash common.Hash) bool{
-	fd := fp.get(hash)
-	return fd != nil
-}
-
-
-// Get retrieves the fileData from local fileDataPool with given
-// tx hash.
-func (fp *FilePool) Get(hash common.Hash) (*types.FileData,error){
-	var getTimes uint64
-Lable:
-	fd := fp.get(hash)
-	if fd == nil {
-		diskDb := fp.currentState.Database().DiskDB()
-		data,err := rawdb.ReadFileDataDetail(diskDb,hash)
-		if err != nil || len(data) == 0{
-				log.Info("本地节点没有从需要从远端要--------","hash",hash.String())
-				if getTimes < 1 {
-					fp.fileDataHashFeed.Send(core.FileDataHashEvent{Hashes: []common.Hash{hash}})
-					log.Info("本地节点没有从需要从远端要---进来了么")
-				}
-				time.Sleep(200 * time.Millisecond)
-				getTimes ++
-				if getTimes <= 1 {
-					goto Lable
-				}
-
-				currentPath, _ := os.Getwd()
-				file, err := os.OpenFile(currentPath+"/unknowTxHash.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-				str := fmt.Sprintf("can not find fileData by TxHash is： %s time to ask ： %s",hash.Hex(),time.Now().String())
-				writeStr := str + "\n"
-				if _, err := file.WriteString(writeStr); err != nil {
-					println("")
-				}
-    		file.Close()
-				
-				return nil,err
-		}
-
-		if len(data) > 0 {
-			var detail DiskDetail
-			err := rlp.DecodeBytes(data,&detail) 
-			if err != nil {
-				return nil,err
-			}
-			if detail.State == DISK_FILEDATA_STATE_DEL {
-				return nil,errors.New("fileData already del")
-			}
-			return &detail.Data,nil
-		}
-	}
-	return fd,nil
-}
-
-
-// get returns a fileData if it is contained in the pool and nil otherwise.
-func (fp *FilePool) get(hash common.Hash) *types.FileData {
-	return fp.all.Get(hash)
-}
-
-
-// addRemotesSync is like addRemotes, but waits for pool reorganization. Tests use this method.
-func (fp *FilePool) addRemotesSync(fds []*types.FileData) []error {
-	return fp.Add(fds, false, true)
-}
-
-// toJournal retrieves all FileData that should be included in the journal,
-// grouped by origin account and sorted by nonce.
-// The returned FileData set is a copy and can be freely modified by calling code.
-func (fp *FilePool) toJournal() map[common.Hash]*types.FileData {
-	fds := make(map[common.Hash]*types.FileData)
-	for hash, fd := range fp.collector {
-		fds[hash] = fd
-	}
-	return fds
-}
-
-// addLocals enqueues a batch of FileData into the pool if they are valid, marking the
-// senders as local ones, ensuring they go around the local pricing constraints.
-//
-// This method is used to add FileData from the RPC API and performs synchronous pool
-// reorganization and event propagation.
-func (fp *FilePool) addLocals(fds []*types.FileData) []error {
-	return fp.Add(fds, true, true)
-}
-
-// Add enqueues a batch of FileData into the pool if they are valid. Depending
-// on the local flag, full pricing constraints will or will not be applied.
-//
-// If sync is set, the method will block until all internal maintenance related
-// to the add is finished. Only use this during tests for determinism!
-func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
-	// Filter out known ones without obtaining the pool lock or recovering signatures
-	var (
-		errs = make([]error, len(fds))
-		news = make([]*types.FileData, 0, len(fds))
-	)
-	for i, fd := range fds {
-		// If the fileData is known, pre-set the error slot
-		if fp.all.Get(fd.TxHash) != nil {
-			errs[i] = ErrAlreadyKnown
-			knownFdMeter.Mark(1)
-			continue
-		}
-
-		txHash := fd.TxHash.String()
-
-		log.Info("FilePool----Add","txHash",txHash)
-		// Exclude fileDatas with basic errors, e.g invalid signatures
-		if err := fp.validateFileDataSignature(fd, local); err != nil {
-			errs[i] = err
-			invalidFdMeter.Mark(1)
-			continue
-		}
-		news = append(news, fd)
-	}
-	if len(news) == 0 {
-		return errs
-	}
-	
-	fp.mu.Lock()
-	newErrs := fp.addFdsLocked(news, local)
-	fp.mu.Unlock()
-
-	var nilSlot = 0
-	var final = make([]*types.FileData, 0)
-	for index, err := range newErrs {
-		if err == nil {
-			final = append(final,news[index])
-		}
-		for errs[nilSlot] != nil {
-			nilSlot++
-		}
-		errs[nilSlot] = err
-		nilSlot++
-	}
-
-	if len(final) != 0 {
-		fp.fileDataFeed.Send(core.NewFileDataEvent{Fileds: final})
-	}
-	return errs
-}
-
-// addFdsLocked attempts to queue a batch of FileDatas if they are valid.
-// The fileData pool lock must be held.
-func (fp *FilePool) addFdsLocked(fds []*types.FileData, local bool) []error {
-	errs := make([]error, len(fds))
-	for i, fd := range fds {
-		_, err := fp.add(fd, local)
-		errs[i] = err
-	}
-
-	return errs
-}
-
-// add validates a fileData and inserts it into the non-executable queue for later
-// saved. 
-func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err error) {
-	// If the fileData is already known, discard it
-	hash := fd.TxHash
-	if fp.all.Get(hash) != nil {
-		log.Trace("Discarding already known fileData", "hash", hash)
-		knownFdMeter.Mark(1)
-		return false, ErrAlreadyKnown
-	}
-
-	//
-	if uint64(fp.all.Slots()+1) > fp.config.GlobalSlots {
-		return false,ErrFdPoolOverflow
-	}
-
-	fp.journalFd(hash, fd)
-	fp.all.Add(fd)
-	fp.beats[hash] = time.Now()
-	log.Trace("Pooled new future transaction", "hash", hash)
-	return replaced, nil
-}
-
-// journalFd adds the specified fileData to the local disk journal if it is
-// deemed to have been sent from a local account.
-func (fp *FilePool) journalFd(txHash common.Hash, fd *types.FileData) {
-	// Only journal if it's enabled and the fileData is local
-	_, flag := fp.collector[txHash]
-	if fp.journal == nil || (!fp.config.JournalRemote && !flag) {
-		return
-	}
-	if err := fp.journal.insert(fd); err != nil {
-		log.Warn("Failed to journal local fileData", "err", err)
-	}
-}
-
-// validateFileDataSignature checks whether a fileData is valid according to the consensus
-// rules, but does not check state-dependent validation such as sufficient balance.
-// This check is meant as an early check which only needs to be performed once,
-// and does not require the pool mutex to be held.
-func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) error {
-	if fd.Length != uint64(len(fd.Data)) {
-		return errors.New("fileData data length not match legth")
-	}
-	if len(fd.SignData) == 0  {
-		return errors.New("fileData signature is empty")
-	}
-	recover,err := types.FdSender(fp.signer,fd)
-	if err != nil || recover != fd.Sender {
-		return errors.New("signature is invalid")
-	}
-	
-	currentPath, _ := os.Getwd()
-	path := strings.Split(currentPath,"/core")[0] + "/srs"
-	domiconSDK,err := kzg.InitDomiconSdk(dSrsSize,path)
-	if err != nil {
-		return err
-	}
-
-	digst,err := domiconSDK.GenerateDataCommit(fd.Data)
-	if err != nil {
-		return errors.New("GenerateDataCommit failed")
-	}
-
-	fixedArray := digst.Bytes()
-  slice := fixedArray[:]
-	if bytes.Equal(slice, fd.Commitment) {
-		return errors.New("commitment is not match the data")
-	}	
-
-	return nil
-}
-
-// Close terminates the fileData pool.
-func (fp *FilePool) Close() error {
-	// Terminate the pool reorger and return
-	close(fp.reorgShutdownCh)
-	fp.wg.Wait()
-
-	fp.subs.Close()
-
-	if fp.journal != nil {
-		fp.journal.close()
-	}
-	log.Info("FilePool pool stopped")
-	return nil
-}
-
-type lookup struct {
-	slots   int
-	lock      sync.RWMutex
-	collector map[common.Hash]*types.FileData
-}
-
-// newLookup returns a new lookup structure.
-func newLookup() *lookup {
-	return &lookup{
-		collector: make(map[common.Hash]*types.FileData),
-	}
-}
-
-// Range calls f on each key and value present in the map. The callback passed
-// should return the indicator whether the iteration needs to be continued.
-// Callers need to specify which set (or both) to be iterated.
-func (t *lookup) Range(f func(hash common.Hash, fd *types.FileData) bool) {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-	for key, value := range t.collector {
-		if !f(key, value) {
-			return
-		}
-	}
-}
-
-// Get returns a fileData if it exists in the lookup, or nil if not found.
-func (t *lookup) Get(hash common.Hash) *types.FileData {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	if fd := t.collector[hash]; fd != nil {
-		return fd
-	}
-	return nil
-}
-
-// Count returns the current number of FileData in the lookup.
-func (t *lookup) Count() int {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	return len(t.collector)
-}
-
-// Add adds a fileData to the lookup.
-func (t *lookup) Add(fd *types.FileData) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	t.slots += 1
-	slotsGauge.Update(int64(t.slots))
-	log.Info("Add-----加进来了")
-	t.collector[fd.TxHash] = fd
-}
-
-// Slots returns the current number of slots used in the lookup.
-func (t *lookup) Slots() int {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	return t.slots
-}
-
-
-// Remove removes a fileData from the lookup.
-func (t *lookup) Remove(hash common.Hash) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	t.slots -= 1
-	slotsGauge.Update(int64(t.slots))
-	delete(t.collector, hash)
-}
-
