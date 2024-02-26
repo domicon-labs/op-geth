@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -71,7 +72,7 @@ func (*LesApiBackend) DiskSaveFileDatas(hashed []common.Hash, blockNrOrHash rpc.
 	return true, nil
 }
 
-func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
+func (*LesApiBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,filedatapool.DISK_FILEDATA_STATE ,error) {
 	panic("unimplemented")
 }
 

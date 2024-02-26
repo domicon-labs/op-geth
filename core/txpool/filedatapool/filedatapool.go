@@ -51,7 +51,7 @@ var (
 
 )
 
-type DISK_FILEDATA_STATE int
+type DISK_FILEDATA_STATE uint
 
 const (
 	DISK_FILEDATA_STATE_DEL    DISK_FILEDATA_STATE = iota
@@ -373,12 +373,12 @@ func (fp *FilePool) Has(hash common.Hash) bool{
 	return fd != nil
 }
 
-func (fp *FilePool) GetByCommitment(comimt []byte) (*types.FileData,error){
+func (fp *FilePool) GetByCommitment(comimt []byte) (*types.FileData,DISK_FILEDATA_STATE,error){
 	diskDb := fp.currentState.Database().DiskDB()
 	hashData,err := rawdb.ReadCommitToHash(diskDb,comimt)
 	if err != nil && len(hashData) == 0 {
 		log.Info("GetByCommitment---err","comimt",&comimt)
-		return nil,errors.New("dont have that commit")
+		return nil,DISK_FILEDATA_STATE_UNKNOW,errors.New("dont have that commit")
 	}
 
 	hash := common.BytesToHash(hashData)
@@ -388,7 +388,7 @@ func (fp *FilePool) GetByCommitment(comimt []byte) (*types.FileData,error){
 
 // Get retrieves the fileData from local fileDataPool with given
 // tx hash.
-func (fp *FilePool) Get(hash common.Hash) (*types.FileData,error){
+func (fp *FilePool) Get(hash common.Hash) (*types.FileData,DISK_FILEDATA_STATE,error){
 	var getTimes uint64
 Lable:
 	fd := fp.get(hash)
@@ -419,22 +419,22 @@ Lable:
 				}
     		file.Close()
 				
-				return nil,err
+				return nil,DISK_FILEDATA_STATE_UNKNOW,err
 		}
 
 		if len(data) > 0 {
 			var detail DiskDetail
 			err := json.Unmarshal(data,&detail)
 			if err != nil {
-				return nil,err
+				return nil,DISK_FILEDATA_STATE_UNKNOW,err
 			}
 			if detail.State == DISK_FILEDATA_STATE_DEL {
-				return nil,errors.New("fileData already del")
+				return nil,detail.State,errors.New("fileData already del")
 			}
-			return &detail.Data,nil
+			return &detail.Data,detail.State,nil
 		}
 	}
-	return fd,nil
+	return fd,DISK_FILEDATA_STATE_SAVE,nil
 }
 
 

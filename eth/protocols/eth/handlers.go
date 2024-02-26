@@ -23,6 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -530,41 +531,52 @@ func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	return backend.Handle(peer, &fds)
 }
 
-
 func handleGetPooledFileDatas(backend Backend,msg Decoder,peer *Peer) error {
 	var query GetPooledFileDataPacket
 	if err := msg.Decode(&query); err != nil {
 		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
 	}	
 	log.Info("handleGetPooledFileDatas----获取要拿的请求","query hash",query.GetPooledFileDatasRequest[0].String())
-	hashes,fds := answerGetPooledFileDatas(backend, query.GetPooledFileDatasRequest)
-	return peer.ReplyPooledFileDatasRLP(query.RequestId, hashes, fds)
+	hashes,fds,status := answerGetPooledFileDatas(backend, query.GetPooledFileDatasRequest)
+	return peer.ReplyPooledFileDatasRLP(query.RequestId, hashes, fds, status)
 }
 
-func answerGetPooledFileDatas(backend Backend, query GetPooledFileDatasRequest) ([]common.Hash, []rlp.RawValue) {
+func answerGetPooledFileDatas(backend Backend, query GetPooledFileDatasRequest) ([]common.Hash, []rlp.RawValue, []uint) {
 	// Gather fileDatas until the fetch or network limits is reached
 	var (
 		bytes  int
 		hashes []common.Hash
 		fds    []rlp.RawValue
+		states []uint
 	)
 	for _, hash := range query {
-		
 		// Retrieve the requested fileData, skipping if unknown to us
-		fd,err := backend.FildDataPool().Get(hash)
-		if fd == nil && err != nil {
+		fd,state,err := backend.FildDataPool().Get(hash)
+		if err != nil {
 			continue
 		}
-		// If known, encode and queue for response packet
-		if encoded, err := rlp.EncodeToBytes(fd); err != nil {
-			log.Error("Failed to encode transaction", "err", err)
-		} else {
-			hashes = append(hashes, hash)
-			fds = append(fds, encoded)
-			bytes += len(encoded)
+	
+		switch state {
+		case filedatapool.DISK_FILEDATA_STATE_DEL:
+			states = append(states, 0)
+		case filedatapool.DISK_FILEDATA_STATE_SAVE:
+			states = append(states, 1)
+		case filedatapool.DISK_FILEDATA_STATE_UNKNOW:	
+			states = append(states, 2)
+		}
+		
+		if fd != nil {
+			// If known, encode and queue for response packet
+			if encoded, err := rlp.EncodeToBytes(fd); err != nil {
+				log.Error("Failed to encode transaction", "err", err)
+			} else {
+				hashes = append(hashes, hash)
+				fds = append(fds, encoded)
+				bytes += len(encoded)
+			}	
 		}
 	}
-	return hashes, fds
+	return hashes, fds, states
 }
 
 func handleNewPooledFileDataHashes67(backend Backend, msg Decoder, peer *Peer) error {

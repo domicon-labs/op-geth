@@ -44,6 +44,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -636,8 +637,8 @@ func (b testBackend) BatchBatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []
 	return []bool{}, []error{}
 }
 
-func (b testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
-	return nil, nil
+func (b testBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,filedatapool.DISK_FILEDATA_STATE,error) {
+	return nil,0,nil
 }
 
 func (b testBackend) GetFileDataByCommitment(comimt []byte) (*types.FileData, error) {

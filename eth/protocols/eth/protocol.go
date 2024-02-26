@@ -378,12 +378,15 @@ type NewPooledFileDataHashesPacket68 struct {
 
 // PooledFileDataRLPResponse is the network packet for fileData distribution, used
 // in the cases we already have them in rlp-encoded form
-type PooledFileDataRLPResponse []rlp.RawValue
+type PooledFileDataRLPResponse []rlp.RawValue 
+
+type PooledFileDataStatusResponse []uint
 
 // PooledFileDataRLPPacket is PooledFileDataRLPResponse with request ID wrapping.
 type PooledFileDataRLPPacket struct {
 	RequestId uint64
 	PooledFileDataRLPResponse
+	PooledFileDataStatusResponse
 }
 
 func (*StatusPacket) Name() string { return "Status" }

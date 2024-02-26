@@ -459,7 +459,7 @@ func (api *ConsensusAPI) UploadFileData(sender common.Address,submitter common.A
 
 // getFileData by txHash
 func (api *ConsensusAPI) GetFileDataWithTxHash(txHash common.Hash) (*types.FileData,error){
-	data,err := api.eth.FilePool().Get(txHash)
+	data,_,err := api.eth.FilePool().Get(txHash)
 	if data == nil || err != nil {
 		return nil,err
 	}

@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -241,8 +242,8 @@ func (*backendMock) UploadFileDataByParams(sender common.Address, submitter comm
 	return nil
 }
 
-func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
-	return nil, nil
+func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData,filedatapool.DISK_FILEDATA_STATE ,error) {
+	return nil, 0,nil
 }
 
 func (*backendMock) GetFileDataByCommitment(comimt []byte) (*types.FileData, error) {

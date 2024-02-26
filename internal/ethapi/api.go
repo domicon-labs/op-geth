@@ -41,6 +41,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -1904,9 +1905,14 @@ func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) *rpc.Result {
 	log.Info("FileDataAPI----1","GetFileDataByHashes---called--len(hashes)",len(hashes.TxHashes))
 	res := rpc.NewResult(uint64(len(hashes.TxHashes)))
 	for index,hash := range hashes.TxHashes {
-		fd,_ := f.b.GetFileDataByHash(hash)
-		if fd != nil {
-			res.Flags[index] = true
+		_,state,_ := f.b.GetFileDataByHash(hash)
+		switch state {
+		case filedatapool.DISK_FILEDATA_STATE_DEL:	
+			res.Flags[index] = rpc.DataState_DEL
+		case filedatapool.DISK_FILEDATA_STATE_SAVE:
+			res.Flags[index] = rpc.DataState_SAVE
+		case filedatapool.DISK_FILEDATA_STATE_UNKNOW:	
+			res.Flags[index] = rpc.DataState_UNKNOW
 		}
 	}
 	return res
@@ -1914,7 +1920,7 @@ func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) *rpc.Result {
 
 func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error) {
 	log.Info("FileDataAPI----","GetFileDataByHash---called--",hash.String())
-	fd,err := f.b.GetFileDataByHash(hash)
+	fd,_,err := f.b.GetFileDataByHash(hash)
 	if err != nil {
 		return nil,err
 	}

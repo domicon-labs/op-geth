@@ -74,13 +74,20 @@ func (ts *TxHashes) String() string {
 		return string(data)
 }
 
+type DataState uint //数据状态
+
+const (
+	DataState_SAVE   DataState= iota
+	DataState_DEL
+	DataState_UNKNOW 
+)
 type Result struct{
-	Flags  					[]bool    `json:"flags"`
+	Flags  					[]DataState    `json:"flags"`
 }
 
 func NewResult(length uint64) *Result{
 	return &Result{
-		Flags: make([]bool, length),
+		Flags: make([]DataState, length),
 	}
 }
 

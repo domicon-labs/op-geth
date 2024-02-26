@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/txpool"
+	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -316,17 +317,17 @@ func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address,
 	//return nil
 }
 
-func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, error) {
-	fd, err := b.eth.fdPool.Get(hash)
+func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,filedatapool.DISK_FILEDATA_STATE,error) {
+	fd,state,err := b.eth.fdPool.Get(hash)
 	log.Info("EthAPIBackend-----GetFileDataByHash", "txHash", hash.String())
 	if fd != nil {
-		return fd, nil
+		return fd,state,nil
 	}
-	return nil, err
+	return nil,state ,err
 }
 
 func (b *EthAPIBackend) GetFileDataByCommitment(comimt []byte) (*types.FileData, error) {
-	fd,err := b.eth.fdPool.GetByCommitment(comimt)
+	fd,_,err := b.eth.fdPool.GetByCommitment(comimt)
 	log.Info("EthAPIBackend-----GetFileDataByCommitment", "comimt", common.Bytes2Hex(comimt))
 	if fd != nil {
 		return fd, nil
@@ -368,14 +369,19 @@ func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (string,error) {
 	return infoStr,errors.New("dont have full fileDatas with local node")
 }
 
-func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {
+func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]uint, []error) {
 	log.Info("EthAPIBackend-----GetFileDataByHashes", "len(hashes)",len(hashes.TxHashes))
-	flags := make([]bool, len(hashes.TxHashes))
+	flags := make([]uint, len(hashes.TxHashes))
 	errs := make([]error, len(hashes.TxHashes))
 	for inde, hash := range hashes.TxHashes {
-		fd, err := b.eth.fdPool.Get(hash)
-		if fd != nil {
-			flags[inde] = true
+		_, state, err := b.eth.fdPool.Get(hash)
+		switch state {
+		case filedatapool.DISK_FILEDATA_STATE_DEL:
+			flags[inde] = 0
+		case filedatapool.DISK_FILEDATA_STATE_SAVE:	
+			flags[inde] = 1
+		case filedatapool.DISK_FILEDATA_STATE_UNKNOW:
+			flags[inde] = 2
 		}
 		errs[inde] = err
 	}
@@ -456,7 +462,7 @@ func (b *EthAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction 
 }
 
 func (b *EthAPIBackend) GetPoolFileData(hash common.Hash) *types.FileData {
-	fd, err := b.eth.fdPool.Get(hash)
+	fd,_,err := b.eth.fdPool.Get(hash)
 	if err != nil {
 		log.Info("GetPoolFileData---get", "err", err.Error())
 	}

@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	pool "github.com/ethereum/go-ethereum/core/txpool/filedatapool"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -91,7 +92,7 @@ type fileDataPool interface {
 
 	// Get retrieves the fileData from local fileDataPool with given
 	// tx hash.
-	Get(hash common.Hash) (*types.FileData,error)
+	Get(hash common.Hash) (*types.FileData,pool.DISK_FILEDATA_STATE,error)
 
 	// Add should add the given transactions to the pool.
 	Add(fds []*types.FileData, local bool, sync bool) []error
