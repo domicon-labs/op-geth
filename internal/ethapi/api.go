@@ -1545,35 +1545,34 @@ func (s *BlockChainAPI) rpcMarshalBlock(ctx context.Context, b *types.Block, inc
 
 // RPCFileData represents a fileData that will serialize to the RPC representation of a fileData
 type RPCFileData struct {
-	Sender         common.Address   `json:"sender"`
-	Submitter      common.Address	`json:"submitter"`
-	Length         hexutil.Uint64	`json:"length"`
-	Index          hexutil.Uint64	`json:"index"`
-	Commitment     hexutil.Bytes    `json:"commitment"`
-	Data           hexutil.Bytes	`json:"data"`
-	Sign  		  	 hexutil.Bytes	`json:"sign"`
-	TxHash         common.Hash      `json:"txhash"`
+	Sender     common.Address `json:"sender"`
+	Submitter  common.Address `json:"submitter"`
+	Length     hexutil.Uint64 `json:"length"`
+	Index      hexutil.Uint64 `json:"index"`
+	Commitment hexutil.Bytes  `json:"commitment"`
+	Data       hexutil.Bytes  `json:"data"`
+	Sign       hexutil.Bytes  `json:"sign"`
+	TxHash     common.Hash    `json:"txhash"`
 }
 
-func NewRPCFileData(fd *types.FileData) *RPCFileData{
+func NewRPCFileData(fd *types.FileData) *RPCFileData {
 	result := &RPCFileData{
-		Sender: 	fd.Sender,
+		Sender:     fd.Sender,
 		Submitter:  fd.Submitter,
 		Length:     hexutil.Uint64(fd.Length),
-		Index: 		hexutil.Uint64(fd.Index),
+		Index:      hexutil.Uint64(fd.Index),
 		Commitment: hexutil.Bytes(fd.Commitment),
 		Data:       hexutil.Bytes(fd.Data),
-		Sign:       hexutil.Bytes(fd.SignData),	
-		TxHash: 	fd.TxHash,
+		Sign:       hexutil.Bytes(fd.SignData),
+		TxHash:     fd.TxHash,
 	}
 
 	return result
 }
 
-type RPCTxHashes struct{
-	TxHashes       []common.Hash      `json:"txhashes"`
+type RPCTxHashes struct {
+	TxHashes []common.Hash `json:"txhashes"`
 }
-
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
 type RPCTransaction struct {
@@ -1890,79 +1889,78 @@ func NewFileDataAPI(b Backend) *FileDataAPI {
 }
 
 func (f *FileDataAPI) UploadFileDataByParams(sender, submitter common.Address, index, length, gasPrice uint64, commitment, data, signData []byte, txHash common.Hash) error {
-	return f.b.UploadFileDataByParams(sender, submitter, index, length,gasPrice, commitment, data, signData, txHash)
+	return f.b.UploadFileDataByParams(sender, submitter, index, length, gasPrice, commitment, data, signData, txHash)
 }
 
 func (f *FileDataAPI) UploadFileData(data []byte) error {
 	return f.b.UploadFileData(data)
 }
 
-func (f *FileDataAPI) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (string,error) {
+func (f *FileDataAPI) CheckSelfState(ctx context.Context, blockNr rpc.BlockNumber) (string, error) {
 	return f.b.CheckSelfState(blockNr)
 }
 
 func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) *rpc.Result {
-	log.Info("FileDataAPI----1","GetFileDataByHashes---called--len(hashes)",len(hashes.TxHashes))
+	log.Info("FileDataAPI----1", "GetFileDataByHashes---called--len(hashes)", len(hashes.TxHashes))
 	res := rpc.NewResult(uint64(len(hashes.TxHashes)))
-	for index,hash := range hashes.TxHashes {
-		_,state,_ := f.b.GetFileDataByHash(hash)
+	for index, hash := range hashes.TxHashes {
+		_, state, _ := f.b.GetFileDataByHash(hash)
 		switch state {
-		case filedatapool.DISK_FILEDATA_STATE_DEL:	
+		case filedatapool.DISK_FILEDATA_STATE_DEL:
 			res.Flags[index] = rpc.DataState_DEL
 		case filedatapool.DISK_FILEDATA_STATE_SAVE:
 			res.Flags[index] = rpc.DataState_SAVE
-		case filedatapool.DISK_FILEDATA_STATE_UNKNOW:	
+		case filedatapool.DISK_FILEDATA_STATE_UNKNOW:
 			res.Flags[index] = rpc.DataState_UNKNOW
 		}
 	}
 	return res
 }
 
-func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData,error) {
-	log.Info("FileDataAPI----","GetFileDataByHash---called--",hash.String())
-	fd,_,err := f.b.GetFileDataByHash(hash)
+func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData, error) {
+	log.Info("FileDataAPI----", "GetFileDataByHash---called--", hash.String())
+	fd, _, err := f.b.GetFileDataByHash(hash)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	rpcFd := NewRPCFileData(fd)
-	return rpcFd,nil
+	return rpcFd, nil
 }
 
-func (f *FileDataAPI) GetFileDataByCommitment(comimt []byte) (*RPCFileData,error) {
+func (f *FileDataAPI) GetFileDataByCommitment(comimt []byte) (*RPCFileData, error) {
 	str := hex.EncodeToString(comimt)
-	log.Info("FileDataAPI----","GetFileDataByCommitment---called--comimt",str)
-	fd,err := f.b.GetFileDataByCommitment(comimt)
+	log.Info("FileDataAPI----", "GetFileDataByCommitment---called--comimt", str)
+	fd, err := f.b.GetFileDataByCommitment(comimt)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	rpcFd := NewRPCFileData(fd)
-	return rpcFd,nil
+	return rpcFd, nil
 }
 
-func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
-	flag,err :=	f.b.DiskSaveFileDataWithHash(hash)
-	return flag,err
+func (f *FileDataAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
+	flag, err := f.b.DiskSaveFileDataWithHash(hash)
+	return flag, err
 }
 
-
-func (f *FileDataAPI) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) (bool,error) {
-	log.Info("FileDataAPI----2","BatchSaveFileDataWithHashes---called--len(hashes)",len(hashes.TxHashes))
-  //res := rpc.NewResult(0)
+func (f *FileDataAPI) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) (bool, error) {
+	log.Info("FileDataAPI----2", "BatchSaveFileDataWithHashes---called--len(hashes)", len(hashes.TxHashes))
+	//res := rpc.NewResult(0)
 	blocNrOrHash := rpc.BlockNumberOrHash{
 		BlockNumber: &hashes.BlockNumber,
-		BlockHash: &hashes.BlockHash,
+		BlockHash:   &hashes.BlockHash,
 	}
-	resFlg,err := f.b.DiskSaveFileDatas(hashes.TxHashes,blocNrOrHash)
-	return resFlg,err
+	resFlg, err := f.b.DiskSaveFileDatas(hashes.TxHashes, blocNrOrHash)
+	return resFlg, err
 }
 
-func (f *FileDataAPI) ChangeCurrentState(state uint64,blockNr rpc.BlockNumber) bool {
+func (f *FileDataAPI) ChangeCurrentState(state uint64, blockNr rpc.BlockNumber) bool {
 	db, header, err := f.b.StateAndHeaderByNumber(context.TODO(), blockNr)
-	if db == nil || err != nil || header == nil{
+	if db == nil || err != nil || header == nil {
 		return false
 	}
 
-	err = rawdb.WriteBlockStateByNumber(db.Database().DiskDB(),header.Hash(),state)
+	err = rawdb.WriteBlockStateByNumber(db.Database().DiskDB(), header.Hash(), state)
 	return err == nil
 }
 
@@ -2156,7 +2154,7 @@ func marshalReceipt(receipt *types.Receipt, blockHash common.Hash, blockNumber u
 		"effectiveGasPrice": (*hexutil.Big)(receipt.EffectiveGasPrice),
 	}
 
-	if chainConfig.Optimism != nil && !tx.IsDepositTx() {
+	if chainConfig.Optimism != nil && !tx.IsDepositTx() && !tx.IsSubmitTx() {
 		fields["l1GasPrice"] = (*hexutil.Big)(receipt.L1GasPrice)
 		fields["l1GasUsed"] = (*hexutil.Big)(receipt.L1GasUsed)
 		fields["l1Fee"] = (*hexutil.Big)(receipt.L1Fee)
