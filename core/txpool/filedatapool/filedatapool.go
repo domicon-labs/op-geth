@@ -342,14 +342,16 @@ func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common
 	rawdb.WriteFileDatas(db,blcHash,blcNr,list)
 	
 	for _,hash := range hashes {
-		fd := fp.all.collector[hash]
-		detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fd}
-		data,err := json.Marshal(detail)
-		if err != nil {
-			log.Info("SaveBatchFileDatasToDisk-----EncodeToBytes bantch","err",err.Error())
+		fd,ok := fp.all.collector[hash]
+		if ok {
+			detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fd}
+			data,err := json.Marshal(detail)
+			if err != nil {
+				log.Info("SaveBatchFileDatasToDisk-----EncodeToBytes bantch","err",err.Error())
+			}
+			rawdb.WriteFileDataDetail(db,data,hash)
+			rawdb.WriteCommitToHash(db,fd.Commitment,fd.TxHash)
 		}
-		rawdb.WriteFileDataDetail(db,data,hash)
-		rawdb.WriteCommitToHash(db,fd.Commitment,fd.TxHash)
 		fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 		fp.removeFileData(hash)
 	}
@@ -429,7 +431,7 @@ Lable:
 				return nil,DISK_FILEDATA_STATE_UNKNOW,err
 			}
 			if detail.State == DISK_FILEDATA_STATE_DEL {
-				return nil,detail.State,errors.New("fileData already del")
+				return &detail.Data,detail.State,errors.New("fileData already del")
 			}
 			return &detail.Data,detail.State,nil
 		}
