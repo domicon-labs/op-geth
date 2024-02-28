@@ -352,7 +352,7 @@ func (tx *Transaction) Mint() *big.Int {
 
 // IsDepositTx returns true if the transaction is a deposit tx type.
 func (tx *Transaction) IsDepositTx() bool {
-	return tx.Type() == DepositTxType || tx.Type() == SubmitTxType
+	return tx.Type() == DepositTxType
 }
 
 func (tx *Transaction) IsSubmitTx() bool {
