@@ -243,6 +243,9 @@ func (fp *FilePool) loop() {
 					detail.State = DISK_FILEDATA_STATE_DEL
 				}
 				if detail.State == DISK_FILEDATA_STATE_DEL {
+					//just for test net v1.0
+					detail.State = DISK_FILEDATA_STATE_SAVE
+					
 					data, _ := rlp.EncodeToBytes(detail)
 					rawdb.WriteFileDataDetail(diskDb,data,txHash)
 					fp.diskCache.Hashes = removeElement(fp.diskCache.Hashes,index)
