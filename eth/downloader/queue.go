@@ -26,18 +26,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/prque"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/prque"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/metrics"
+	"github.com/domicon-labs/op-geth/params"
 )
 
 const (
-	bodyType    = uint(0)
-	receiptType = uint(1)
-	fileDataType= uint(2)
+	bodyType     = uint(0)
+	receiptType  = uint(1)
+	fileDataType = uint(2)
 )
 
 var (
@@ -147,11 +147,10 @@ type queue struct {
 	receiptPendPool  map[string]*fetchRequest           // Currently pending receipt retrieval operations
 	receiptWakeCh    chan bool                          // Channel to notify when receipt fetcher of new tasks
 
-	fileDataTaskPool  map[common.Hash]*types.Header 
+	fileDataTaskPool  map[common.Hash]*types.Header
 	fileDataTaskQueue *prque.Prque[int64, *types.Header]
-	fileDataPendPool  	map[string]*fetchRequest           
-	fileDataWakeCh    chan bool 
-
+	fileDataPendPool  map[string]*fetchRequest
+	fileDataWakeCh    chan bool
 
 	resultCache *resultStore       // Downloaded but not yet delivered fetch results
 	resultSize  common.StorageSize // Approximate size of a block (exponential moving average)
@@ -167,15 +166,15 @@ type queue struct {
 func newQueue(blockCacheLimit int, thresholdInitialSize int) *queue {
 	lock := new(sync.RWMutex)
 	q := &queue{
-		headerContCh:     make(chan bool, 1),
-		blockTaskQueue:   prque.New[int64, *types.Header](nil),
-		blockWakeCh:      make(chan bool, 1),
-		receiptTaskQueue: prque.New[int64, *types.Header](nil),
-		receiptWakeCh:    make(chan bool, 1),
+		headerContCh:      make(chan bool, 1),
+		blockTaskQueue:    prque.New[int64, *types.Header](nil),
+		blockWakeCh:       make(chan bool, 1),
+		receiptTaskQueue:  prque.New[int64, *types.Header](nil),
+		receiptWakeCh:     make(chan bool, 1),
 		fileDataTaskQueue: prque.New[int64, *types.Header](nil),
-		fileDataWakeCh:   make(chan bool),
-		active:           sync.NewCond(lock),
-		lock:             lock,
+		fileDataWakeCh:    make(chan bool),
+		active:            sync.NewCond(lock),
+		lock:              lock,
 	}
 	q.Reset(blockCacheLimit, thresholdInitialSize)
 	return q
@@ -276,7 +275,6 @@ func (q *queue) InFlightFileDatas() bool {
 	return len(q.fileDataPendPool) > 0
 }
 
-
 // Idle returns if the queue is fully idle or has some data still inside.
 func (q *queue) Idle() bool {
 	q.lock.Lock()
@@ -373,11 +371,11 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 		// TODO full fileData sync should added
 		if headerTime.After(twoDaysAgo) {
 			// Queue for fileData retrieval
-			if _,ok := q.fileDataTaskPool[hash]; ok {
-				log.Warn("Header already scheduled for fileData fetch","number",header.Number, "hash", hash)
+			if _, ok := q.fileDataTaskPool[hash]; ok {
+				log.Warn("Header already scheduled for fileData fetch", "number", header.Number, "hash", hash)
 			} else {
 				q.fileDataTaskPool[hash] = header
-				q.fileDataTaskQueue.Push(header,-int64(header.Number.Uint64()))
+				q.fileDataTaskQueue.Push(header, -int64(header.Number.Uint64()))
 			}
 		}
 
@@ -431,7 +429,7 @@ func (q *queue) Results(block bool) []*fetchResult {
 			size += common.StorageSize(tx.Size())
 		}
 
-		for _,fd := range result.FileDatas {
+		for _, fd := range result.FileDatas {
 			size += common.StorageSize(fd.Size())
 		}
 
@@ -544,9 +542,8 @@ func (q *queue) ReserveFileDatas(p *peerConnection, count int) (*fetchRequest, b
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	return q.reserveHeaders(p, count, q.fileDataTaskPool, q.fileDataTaskQueue, q.fileDataPendPool,fileDataType)
+	return q.reserveHeaders(p, count, q.fileDataTaskPool, q.fileDataTaskQueue, q.fileDataPendPool, fileDataType)
 }
-
 
 // reserveHeaders reserves a set of data download operations for a given peer,
 // skipping any previously failed ones. This method is a generic version used
@@ -671,9 +668,9 @@ func (q *queue) Revoke(peerID string) {
 		delete(q.receiptPendPool, peerID)
 	}
 
-	if requset,ok := q.fileDataPendPool[peerID]; ok {
+	if requset, ok := q.fileDataPendPool[peerID]; ok {
 		for _, header := range requset.Headers {
-			q.fileDataTaskQueue.Push(header,-int64(header.Number.Uint64()))
+			q.fileDataTaskQueue.Push(header, -int64(header.Number.Uint64()))
 		}
 		delete(q.fileDataPendPool, peerID)
 	}
@@ -957,11 +954,11 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt, recei
 // DeliverFileDatas injects a fileData retrieval response into the results queue.
 // The method returns the number of fileDatas accepted from the delivery
 // and also wakes any threads waiting for data delivery.
-func (q *queue) DeliverFileDatas(id string,fileDataList []*types.FileData,fileDataListHashes []common.Hash) (int, error) {
+func (q *queue) DeliverFileDatas(id string, fileDataList []*types.FileData, fileDataListHashes []common.Hash) (int, error) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	validate := func (index int, header *types.Header) error {
+	validate := func(index int, header *types.Header) error {
 		if len(fileDataList) != len(fileDataListHashes) {
 			return errInvalidFileData
 		}
@@ -972,12 +969,12 @@ func (q *queue) DeliverFileDatas(id string,fileDataList []*types.FileData,fileDa
 		return nil
 	}
 
-	reconstruct := func (index int, result *fetchResult)  {
-			result.FileDatas = fileDataList
-			result.SetFileDatasDone()
+	reconstruct := func(index int, result *fetchResult) {
+		result.FileDatas = fileDataList
+		result.SetFileDatasDone()
 	}
 	return q.deliver(id, q.fileDataTaskPool, q.fileDataTaskQueue, q.fileDataPendPool,
-			fileDataReqTimer, fileDataInMeter, fileDataDropMeter, len(fileDataList),validate, reconstruct)
+		fileDataReqTimer, fileDataInMeter, fileDataDropMeter, len(fileDataList), validate, reconstruct)
 }
 
 // deliver injects a data retrieval response into the results queue.

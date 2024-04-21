@@ -25,13 +25,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
+	"github.com/domicon-labs/op-geth/cmd/utils"
+	"github.com/domicon-labs/op-geth/crypto"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/p2p/discover"
+	"github.com/domicon-labs/op-geth/p2p/enode"
+	"github.com/domicon-labs/op-geth/p2p/nat"
+	"github.com/domicon-labs/op-geth/p2p/netutil"
 )
 
 func main() {

@@ -19,9 +19,9 @@ package state
 import (
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/metrics"
 )
 
 var (

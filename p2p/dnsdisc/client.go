@@ -27,12 +27,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/lru"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/domicon-labs/op-geth/common/lru"
+	"github.com/domicon-labs/op-geth/common/mclock"
+	"github.com/domicon-labs/op-geth/crypto"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/p2p/enode"
+	"github.com/domicon-labs/op-geth/p2p/enr"
 	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"
 )

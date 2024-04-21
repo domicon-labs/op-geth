@@ -22,8 +22,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/hexutil"
 )
 
 func TestRoundtrip(t *testing.T) {

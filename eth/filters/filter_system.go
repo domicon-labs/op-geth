@@ -26,18 +26,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/lru"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/bloombits"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/domicon-labs/op-geth"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/lru"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/bloombits"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/event"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rpc"
 )
 
 // Config represents the configuration of the filter system.
@@ -174,7 +174,7 @@ const (
 	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
-	
+
 	fdChanSize = 4096
 	// rmLogsChanSize is the size of channel listening to RemovedLogsEvent.
 	rmLogsChanSize = 10
@@ -254,7 +254,7 @@ func NewEventSystem(sys *FilterSystem, lightMode bool) *EventSystem {
 	m.pendingLogsSub = m.backend.SubscribePendingLogsEvent(m.pendingLogsCh)
 
 	// Make sure none of the subscriptions are empty
-	if m.txsSub == nil || m.logsSub == nil || m.rmLogsSub == nil || m.chainSub == nil || m.pendingLogsSub == nil || m.fdsSub == nil{
+	if m.txsSub == nil || m.logsSub == nil || m.rmLogsSub == nil || m.chainSub == nil || m.pendingLogsSub == nil || m.fdsSub == nil {
 		log.Crit("Subscribe for event system failed")
 	}
 
@@ -289,7 +289,7 @@ func (sub *Subscription) Unsubscribe() {
 				break uninstallLoop
 			case <-sub.f.logs:
 			case <-sub.f.txs:
-			case <-sub.f.fds:	
+			case <-sub.f.fds:
 			case <-sub.f.headers:
 			}
 		}
@@ -430,7 +430,7 @@ func (es *EventSystem) SubscribePendingTxs(txs chan []*types.Transaction) *Subsc
 	return es.subscribe(sub)
 }
 
-func (es *EventSystem) SubscribenNewFileDatas(fds chan []*types.FileData) *Subscription{
+func (es *EventSystem) SubscribenNewFileDatas(fds chan []*types.FileData) *Subscription {
 	sub := &subscription{
 		id:        rpc.NewID(),
 		typ:       PendingFileDataSubscription,
@@ -476,7 +476,7 @@ func (es *EventSystem) handleTxsEvent(filters filterIndex, ev core.NewTxsEvent) 
 	}
 }
 
-func (es *EventSystem) handleFileDatasEvent(filters filterIndex,ev core.NewFileDataEvent){
+func (es *EventSystem) handleFileDatasEvent(filters filterIndex, ev core.NewFileDataEvent) {
 	for _, f := range filters[PendingFileDataSubscription] {
 		f.fds <- ev.Fileds
 	}
@@ -594,7 +594,7 @@ func (es *EventSystem) eventLoop() {
 		select {
 		case ev := <-es.txsCh:
 			es.handleTxsEvent(index, ev)
-		case ev := <- es.fdsCh:
+		case ev := <-es.fdsCh:
 			es.handleFileDatasEvent(index, ev)
 		case ev := <-es.logsCh:
 			es.handleLogs(index, ev)
@@ -629,7 +629,7 @@ func (es *EventSystem) eventLoop() {
 		case <-es.txsSub.Err():
 			return
 		case <-es.fdsSub.Err():
-			return	
+			return
 		case <-es.logsSub.Err():
 			return
 		case <-es.rmLogsSub.Err():

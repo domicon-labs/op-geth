@@ -26,20 +26,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/eth/protocols/snap"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/domicon-labs/op-geth"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/consensus/ethash"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/core/vm"
+	"github.com/domicon-labs/op-geth/eth/protocols/eth"
+	"github.com/domicon-labs/op-geth/eth/protocols/snap"
+	"github.com/domicon-labs/op-geth/event"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rlp"
+	"github.com/domicon-labs/op-geth/trie"
 )
 
 // downloadTester is a test simulator for mocking out local block chain.
@@ -329,7 +329,7 @@ func (dlp *downloadTesterPeer) RequestReceipts(hashes []common.Hash, sink chan *
 }
 
 func (dlp *downloadTesterPeer) StartRequestFileDatas(hashes []common.Hash, sink chan *eth.Response) (*eth.Request, error) {
-	return  nil,nil
+	return nil, nil
 }
 
 // ID retrieves the peer's unique identifier.

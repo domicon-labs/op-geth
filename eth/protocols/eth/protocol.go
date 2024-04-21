@@ -22,10 +22,10 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/forkid"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/core/forkid"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/rlp"
 )
 
 // Constants to match up protocol versions and messages
@@ -63,8 +63,8 @@ const (
 	PooledTransactionsMsg         = 0x0a
 	GetReceiptsMsg                = 0x0f
 	ReceiptsMsg                   = 0x10
-	FileDataMsg          		  		= 0x0c
-	ReqFileDatasMsg								= 0x12
+	FileDataMsg                   = 0x0c
+	ReqFileDatasMsg               = 0x12
 	ResFileDatasMsg               = 0x11
 	PooledFileDatasMsg            = 0x0b
 	GetPooledFileDatasMsg         = 0x0d
@@ -343,7 +343,7 @@ type GetFileDatasPacket struct {
 	GetFileDatasRequest
 }
 
-// FileDatasResponse 
+// FileDatasResponse
 type FileDatasResponse []byte
 
 type FileDatasResponseRLPPacket struct {
@@ -378,7 +378,7 @@ type NewPooledFileDataHashesPacket68 struct {
 
 // PooledFileDataRLPResponse is the network packet for fileData distribution, used
 // in the cases we already have them in rlp-encoded form
-type PooledFileDataRLPResponse []rlp.RawValue 
+type PooledFileDataRLPResponse []rlp.RawValue
 
 type PooledFileDataStatusResponse []uint
 
@@ -434,20 +434,19 @@ func (*FileDataPacket) Name() string { return "FileData" }
 func (*FileDataPacket) Kind() byte   { return FileDataMsg }
 
 func (*NewPooledFileDataHashesPacket67) Name() string { return "NewPooledFileDataHashesPacket67" }
-func (*NewPooledFileDataHashesPacket67) Kind() byte { return NewPooledFileDataHashesMsg }
- 
+func (*NewPooledFileDataHashesPacket67) Kind() byte   { return NewPooledFileDataHashesMsg }
+
 func (*NewPooledFileDataHashesPacket68) Name() string { return "NewPooledFileDataHashesPacket68" }
-func (*NewPooledFileDataHashesPacket68) Kind() byte { return NewPooledFileDataHashesMsg }
+func (*NewPooledFileDataHashesPacket68) Kind() byte   { return NewPooledFileDataHashesMsg }
 
 func (*GetPooledFileDatasRequest) Name() string { return "GetPooledFileDatas" }
 func (*GetPooledFileDatasRequest) Kind() byte   { return PooledFileDatasMsg }
 
 func (*PooledFileDataResponse) Name() string { return "PooledFileDataResponse" }
-func (*PooledFileDataResponse) Kind() byte 	 { return PooledFileDatasMsg }
+func (*PooledFileDataResponse) Kind() byte   { return PooledFileDatasMsg }
 
 func (*GetFileDatasRequest) Name() string { return "ReqFileDatasMsg" }
-func (*GetFileDatasRequest) Kind() byte		{ return ReqFileDatasMsg }
+func (*GetFileDatasRequest) Kind() byte   { return ReqFileDatasMsg }
 
 func (*FileDatasResponse) Name() string { return "ResFileDatasMsg" }
-func (*FileDatasResponse) Kind() byte   { return ResFileDatasMsg } 
-
+func (*FileDatasResponse) Kind() byte   { return ResFileDatasMsg }

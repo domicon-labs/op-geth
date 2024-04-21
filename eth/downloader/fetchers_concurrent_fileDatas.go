@@ -8,9 +8,9 @@ package downloader
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/eth/protocols/eth"
+	"github.com/domicon-labs/op-geth/log"
 )
 
 // fileDataQueue implements typedQueue and is a type adapter between the generic
@@ -77,7 +77,7 @@ func (q *fileDataQueue) request(peer *peerConnection, req *fetchRequest, resCh c
 // deliver is responsible for taking a generic response packet from the concurrent
 // fetcher, unpacking the fileData data and delivering it to the downloader's queue.
 func (q *fileDataQueue) deliver(peer *peerConnection, packet *eth.Response) (int, error) {
-	fileDatas := *packet.Res.(*eth.PooledFileDataResponse)	
+	fileDatas := *packet.Res.(*eth.PooledFileDataResponse)
 	//receipts := *packet.Res.(*eth.ReceiptsResponse)
 	hashes := packet.Meta.([]common.Hash) // {fileDatas hashes}
 

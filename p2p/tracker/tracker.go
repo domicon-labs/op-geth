@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/metrics"
 )
 
 const (

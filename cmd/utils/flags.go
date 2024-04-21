@@ -34,46 +34,46 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/fdlimit"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
-	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/kzg4844"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/catalyst"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/eth/filters"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/eth/tracers"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/ethdb/remotedb"
-	"github.com/ethereum/go-ethereum/ethstats"
-	"github.com/ethereum/go-ethereum/graphql"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/internal/flags"
-	"github.com/ethereum/go-ethereum/les"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/metrics/exp"
-	"github.com/ethereum/go-ethereum/metrics/influxdb"
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/trie"
-	"github.com/ethereum/go-ethereum/trie/triedb/hashdb"
-	"github.com/ethereum/go-ethereum/trie/triedb/pathdb"
+	"github.com/domicon-labs/op-geth/accounts"
+	"github.com/domicon-labs/op-geth/accounts/keystore"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/fdlimit"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/txpool/filedatapool"
+	"github.com/domicon-labs/op-geth/core/txpool/legacypool"
+	"github.com/domicon-labs/op-geth/core/vm"
+	"github.com/domicon-labs/op-geth/crypto"
+	"github.com/domicon-labs/op-geth/crypto/kzg4844"
+	"github.com/domicon-labs/op-geth/eth"
+	"github.com/domicon-labs/op-geth/eth/catalyst"
+	"github.com/domicon-labs/op-geth/eth/downloader"
+	"github.com/domicon-labs/op-geth/eth/ethconfig"
+	"github.com/domicon-labs/op-geth/eth/filters"
+	"github.com/domicon-labs/op-geth/eth/gasprice"
+	"github.com/domicon-labs/op-geth/eth/tracers"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/ethdb/remotedb"
+	"github.com/domicon-labs/op-geth/ethstats"
+	"github.com/domicon-labs/op-geth/graphql"
+	"github.com/domicon-labs/op-geth/internal/ethapi"
+	"github.com/domicon-labs/op-geth/internal/flags"
+	"github.com/domicon-labs/op-geth/les"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/metrics"
+	"github.com/domicon-labs/op-geth/metrics/exp"
+	"github.com/domicon-labs/op-geth/metrics/influxdb"
+	"github.com/domicon-labs/op-geth/miner"
+	"github.com/domicon-labs/op-geth/node"
+	"github.com/domicon-labs/op-geth/p2p"
+	"github.com/domicon-labs/op-geth/p2p/enode"
+	"github.com/domicon-labs/op-geth/p2p/nat"
+	"github.com/domicon-labs/op-geth/p2p/netutil"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rpc"
+	"github.com/domicon-labs/op-geth/trie"
+	"github.com/domicon-labs/op-geth/trie/triedb/hashdb"
+	"github.com/domicon-labs/op-geth/trie/triedb/pathdb"
 	pcsclite "github.com/gballet/go-libpcsclite"
 	gopsutil "github.com/shirou/gopsutil/mem"
 	"github.com/urfave/cli/v2"
@@ -332,7 +332,7 @@ var (
 		Usage:    "Enables serving light clients before syncing",
 		Category: flags.LightCategory,
 	}
-	
+
 	FileDataPoolLocalsFlag = &cli.StringFlag{
 		Name:     "filedatapool.locals",
 		Usage:    "Comma separated accounts to treat as locals (no flush, priority inclusion)",
@@ -344,14 +344,14 @@ var (
 		Usage:    "Disk journal for local fileData to survive node restarts",
 		Value:    ethconfig.Defaults.FileDataPool.Journal,
 		Category: flags.FileDataCategory,
-	} 
+	}
 
 	FileDataLifetimeFlag = &cli.DurationFlag{
 		Name:     "filedatapool.lifetime",
 		Usage:    "Maximum amount of time non-executable fileData are queued",
 		Value:    ethconfig.Defaults.FileDataPool.Lifetime,
 		Category: flags.FileDataCategory,
-	}	
+	}
 
 	FileDataRejournalFlag = &cli.DurationFlag{
 		Name:     "filedatapool.lifetime",
@@ -1631,7 +1631,7 @@ func setGPO(ctx *cli.Context, cfg *gasprice.Config, light bool) {
 	}
 }
 
-func setFileDataPool(ctx *cli.Context, cfg *filedatapool.Config){
+func setFileDataPool(ctx *cli.Context, cfg *filedatapool.Config) {
 	if ctx.IsSet(FileDataPoolLocalsFlag.Name) {
 		locals := strings.Split(ctx.String(FileDataPoolLocalsFlag.Name), ",")
 		for _, account := range locals {
@@ -1646,7 +1646,7 @@ func setFileDataPool(ctx *cli.Context, cfg *filedatapool.Config){
 	if ctx.IsSet(FileDataPoolJournalFlag.Name) {
 		cfg.Journal = ctx.String(FileDataPoolJournalFlag.Name)
 	}
-	
+
 	if ctx.IsSet(FileDataLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.Duration(FileDataLifetimeFlag.Name)
 	}
@@ -1808,7 +1808,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	setEtherbase(ctx, cfg)
 	setGPO(ctx, &cfg.GPO, ctx.String(SyncModeFlag.Name) == "light")
 	setTxPool(ctx, &cfg.TxPool)
-	setFileDataPool(ctx,&cfg.FileDataPool)
+	setFileDataPool(ctx, &cfg.FileDataPool)
 	setMiner(ctx, &cfg.Miner)
 	setRequiredBlocks(ctx, cfg)
 	setLes(ctx, cfg)

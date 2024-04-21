@@ -19,7 +19,7 @@
 package downloader
 
 import (
-	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/domicon-labs/op-geth/metrics"
 )
 
 var (
@@ -38,7 +38,7 @@ var (
 	receiptDropMeter    = metrics.NewRegisteredMeter("eth/downloader/receipts/drop", nil)
 	receiptTimeoutMeter = metrics.NewRegisteredMeter("eth/downloader/receipts/timeout", nil)
 
-	fileDataInMeter     = metrics.NewRegisteredMeter("eth/downloader/fileData/in", nil)
+	fileDataInMeter      = metrics.NewRegisteredMeter("eth/downloader/fileData/in", nil)
 	fileDataReqTimer     = metrics.NewRegisteredTimer("eth/downloader/fileData/req", nil)
 	fileDataDropMeter    = metrics.NewRegisteredMeter("eth/downloader/fileData/drop", nil)
 	fileDataTimeoutMeter = metrics.NewRegisteredMeter("eth/downloader/fileData/timeout", nil)

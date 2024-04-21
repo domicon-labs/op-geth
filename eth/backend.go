@@ -26,40 +26,40 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/beacon"
-	"github.com/ethereum/go-ethereum/consensus/clique"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/bloombits"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state/pruner"
-	"github.com/ethereum/go-ethereum/core/txpool"
-	"github.com/ethereum/go-ethereum/core/txpool/blobpool"
-	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
-	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/eth/protocols/snap"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/internal/shutdowncheck"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/dnsdisc"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/domicon-labs/op-geth/accounts"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/hexutil"
+	"github.com/domicon-labs/op-geth/consensus"
+	"github.com/domicon-labs/op-geth/consensus/beacon"
+	"github.com/domicon-labs/op-geth/consensus/clique"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/bloombits"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/state/pruner"
+	"github.com/domicon-labs/op-geth/core/txpool"
+	"github.com/domicon-labs/op-geth/core/txpool/blobpool"
+	"github.com/domicon-labs/op-geth/core/txpool/filedatapool"
+	"github.com/domicon-labs/op-geth/core/txpool/legacypool"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/core/vm"
+	"github.com/domicon-labs/op-geth/eth/downloader"
+	"github.com/domicon-labs/op-geth/eth/ethconfig"
+	"github.com/domicon-labs/op-geth/eth/gasprice"
+	"github.com/domicon-labs/op-geth/eth/protocols/eth"
+	"github.com/domicon-labs/op-geth/eth/protocols/snap"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/event"
+	"github.com/domicon-labs/op-geth/internal/ethapi"
+	"github.com/domicon-labs/op-geth/internal/shutdowncheck"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/miner"
+	"github.com/domicon-labs/op-geth/node"
+	"github.com/domicon-labs/op-geth/p2p"
+	"github.com/domicon-labs/op-geth/p2p/dnsdisc"
+	"github.com/domicon-labs/op-geth/p2p/enode"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rlp"
+	"github.com/domicon-labs/op-geth/rpc"
 )
 
 // Config contains the configuration options of the ETH protocol.
@@ -250,14 +250,14 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = stack.ResolvePath(config.TxPool.Journal)
 	}
-	
+
 	//added by echo
 	if config.FileDataPool.Journal != "" {
 		config.FileDataPool.Journal = stack.ResolvePath(config.FileDataPool.Journal)
 	}
 
 	legacyPool := legacypool.New(config.TxPool, eth.blockchain)
-	fileDataPool := filedatapool.New(config.FileDataPool,eth.blockchain)
+	fileDataPool := filedatapool.New(config.FileDataPool, eth.blockchain)
 	eth.txPool, err = txpool.New(new(big.Int).SetUint64(config.TxPool.PriceLimit), eth.blockchain, []txpool.SubPool{legacyPool, blobPool})
 	if err != nil {
 		return nil, err
@@ -269,7 +269,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		Database:       chainDb,
 		Chain:          eth.blockchain,
 		TxPool:         eth.txPool,
-		FileDataPool:  	eth.fdPool,
+		FileDataPool:   eth.fdPool,
 		Merger:         eth.merger,
 		Network:        config.NetworkId,
 		Sync:           config.SyncMode,
@@ -529,7 +529,7 @@ func (s *Ethereum) Miner() *miner.Miner { return s.miner }
 func (s *Ethereum) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Ethereum) BlockChain() *core.BlockChain       { return s.blockchain }
 func (s *Ethereum) TxPool() *txpool.TxPool             { return s.txPool }
-func (s *Ethereum) DB() ethdb.Database 				   { return s.blockchain.Db()}
+func (s *Ethereum) DB() ethdb.Database                 { return s.blockchain.Db() }
 func (s *Ethereum) FilePool() *filedatapool.FilePool   { return s.fdPool }
 func (s *Ethereum) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Ethereum) Engine() consensus.Engine           { return s.engine }

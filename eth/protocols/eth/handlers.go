@@ -21,13 +21,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/txpool/filedatapool"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/rlp"
+	"github.com/domicon-labs/op-geth/trie"
 )
 
 func handleGetBlockHeaders(backend Backend, msg Decoder, peer *Peer) error {
@@ -502,7 +502,6 @@ func handlePooledTransactions(backend Backend, msg Decoder, peer *Peer) error {
 	return backend.Handle(peer, &txs.PooledTransactionsResponse)
 }
 
-
 var fileDataReceiveTimes uint64
 
 func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
@@ -511,7 +510,7 @@ func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	if err := msg.Decode(&fds); err != nil {
 		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
 	}
-	
+
 	flag := peer.knownFds.Contains(fds[0].TxHash)
 	if flag {
 		return nil
@@ -524,20 +523,20 @@ func handleFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 		if fd == nil {
 			return fmt.Errorf("%w: fileData %d is nil", errDecode, i)
 		}
-		log.Info("handleFileDatas----","TxHash",fd.TxHash)
+		log.Info("handleFileDatas----", "TxHash", fd.TxHash)
 		peer.markFileData(fd.TxHash)
 	}
-	log.Info("handleFileDatas----收到了FileDataPacket","fileDataReceiveTimes",fileDataReceiveTimes)
+	log.Info("handleFileDatas----收到了FileDataPacket", "fileDataReceiveTimes", fileDataReceiveTimes)
 	return backend.Handle(peer, &fds)
 }
 
-func handleGetPooledFileDatas(backend Backend,msg Decoder,peer *Peer) error {
+func handleGetPooledFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	var query GetPooledFileDataPacket
 	if err := msg.Decode(&query); err != nil {
 		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
-	}	
-	log.Info("handleGetPooledFileDatas----获取要拿的请求","query hash",query.GetPooledFileDatasRequest[0].String())
-	hashes,fds,status := answerGetPooledFileDatas(backend, query.GetPooledFileDatasRequest)
+	}
+	log.Info("handleGetPooledFileDatas----获取要拿的请求", "query hash", query.GetPooledFileDatasRequest[0].String())
+	hashes, fds, status := answerGetPooledFileDatas(backend, query.GetPooledFileDatasRequest)
 	return peer.ReplyPooledFileDatasRLP(query.RequestId, hashes, fds, status)
 }
 
@@ -551,20 +550,20 @@ func answerGetPooledFileDatas(backend Backend, query GetPooledFileDatasRequest) 
 	)
 	for _, hash := range query {
 		// Retrieve the requested fileData, skipping if unknown to us
-		fd,state,err := backend.FildDataPool().Get(hash)
+		fd, state, err := backend.FildDataPool().Get(hash)
 		if err != nil {
 			continue
 		}
-	
+
 		switch state {
 		case filedatapool.DISK_FILEDATA_STATE_DEL:
 			states = append(states, 0)
 		case filedatapool.DISK_FILEDATA_STATE_SAVE:
 			states = append(states, 1)
-		case filedatapool.DISK_FILEDATA_STATE_UNKNOW:	
+		case filedatapool.DISK_FILEDATA_STATE_UNKNOW:
 			states = append(states, 2)
 		}
-		
+
 		if fd != nil {
 			// If known, encode and queue for response packet
 			if encoded, err := rlp.EncodeToBytes(fd); err != nil {
@@ -573,7 +572,7 @@ func answerGetPooledFileDatas(backend Backend, query GetPooledFileDatasRequest) 
 				hashes = append(hashes, hash)
 				fds = append(fds, encoded)
 				bytes += len(encoded)
-			}	
+			}
 		}
 	}
 	return hashes, fds, states
@@ -586,7 +585,7 @@ func handleNewPooledFileDataHashes67(backend Backend, msg Decoder, peer *Peer) e
 	}
 	// Schedule all the unknown hashes for retrieval
 	for _, hash := range *ann {
-		log.Info("handleNewPooledFileDataHashes67---收到了交易哈希","txHash",hash.String())
+		log.Info("handleNewPooledFileDataHashes67---收到了交易哈希", "txHash", hash.String())
 		peer.markFileData(hash)
 	}
 	return backend.Handle(peer, ann)
@@ -602,7 +601,7 @@ func handleNewPooledFileDataHashes68(backend Backend, msg Decoder, peer *Peer) e
 	}
 	// Schedule all the unknown hashes for retrieval
 	for _, hash := range ann.Hashes {
-		log.Info("handleNewPooledFileDataHashes68---收到了交易哈希","txHash",hash.String())
+		log.Info("handleNewPooledFileDataHashes68---收到了交易哈希", "txHash", hash.String())
 		peer.markFileData(hash)
 	}
 	return backend.Handle(peer, ann)
@@ -616,12 +615,12 @@ func handlePooledFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	}
 
 	for i, fd := range fds.PooledFileDataResponse {
-			// Validate and mark the remote fileData
-			if fd == nil {
-				return fmt.Errorf("%w: fileData %d is nil", errDecode, i)
-			}
-			log.Info("handlePooledFileDatas----","txHash",fd.TxHash.String())
-			peer.markFileData(fd.TxHash)
+		// Validate and mark the remote fileData
+		if fd == nil {
+			return fmt.Errorf("%w: fileData %d is nil", errDecode, i)
+		}
+		log.Info("handlePooledFileDatas----", "txHash", fd.TxHash.String())
+		peer.markFileData(fd.TxHash)
 	}
 	requestTracker.Fulfil(peer.id, peer.version, PooledFileDatasMsg, fds.RequestId)
 	return backend.Handle(peer, &fds.PooledFileDataResponse)
@@ -633,22 +632,22 @@ func handleResFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	if err := msg.Decode(res); err != nil {
 		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
 	}
-	
-	metaData := func () interface{} {
+
+	metaData := func() interface{} {
 		var btfd BantchFileData
-	  err := rlp.DecodeBytes(res.FileDatasResponse,&btfd)
+		err := rlp.DecodeBytes(res.FileDatasResponse, &btfd)
 		if err != nil {
-			log.Error("handleResFileDatas----decode BantchFileData err","err",err.Error())
+			log.Error("handleResFileDatas----decode BantchFileData err", "err", err.Error())
 		}
 		hashes := make([]common.Hash, len(btfd.FileDatas))
-		for inde,data := range btfd.FileDatas {
-			var fd types.FileData 
-			rlp.DecodeBytes(data,&fd)
+		for inde, data := range btfd.FileDatas {
+			var fd types.FileData
+			rlp.DecodeBytes(data, &fd)
 			hashes[inde] = fd.TxHash
 		}
 		return hashes
 	}
-	
+
 	return peer.dispatchResponse(&Response{
 		id:   res.RequestId,
 		code: ResFileDatasMsg,
@@ -666,16 +665,16 @@ func handleReqFileDatas(backend Backend, msg Decoder, peer *Peer) error {
 	errs := peer.ReplyFileDatasMarshal(query.RequestId, response)
 	if len(errs) != 0 {
 		return errors.New("send Requested FileDatas failed")
-	}else{
+	} else {
 		return nil
 	}
 }
 
 type BantchFileData struct {
-		HeaderHash    common.Hash 	`json:"headerhash"`
-		Cap						uint64				`json:"cap"`
-		Length        uint64				`json:"length"`
-		FileDatas     [][]byte			`json:"filedatas"`
+	HeaderHash common.Hash `json:"headerhash"`
+	Cap        uint64      `json:"cap"`
+	Length     uint64      `json:"length"`
+	FileDatas  [][]byte    `json:"filedatas"`
 }
 
 // ServiceGetFileDatasQuery assembles the response to a fileData query. It is
@@ -683,11 +682,11 @@ type BantchFileData struct {
 func ServiceGetFileDatasQuery(chain *core.BlockChain, query GetFileDatasRequest) []*BantchFileData {
 	// Gather state data until the fetch or network limits is reached
 	var (
-		bytes    int
+		bytes int
 	)
 
-	var batch 	uint64
-	var cap 		uint64
+	var batch uint64
+	var cap uint64
 
 	resultList := make([]*BantchFileData, 0)
 
@@ -695,7 +694,7 @@ func ServiceGetFileDatasQuery(chain *core.BlockChain, query GetFileDatasRequest)
 		// Retrieve the requested block's fileData
 		results := chain.GetFileDatasByHash(hash)
 		if results == nil {
-			if header := chain.GetHeaderByHash(hash); header == nil{
+			if header := chain.GetHeaderByHash(hash); header == nil {
 				continue
 			}
 		}
@@ -703,37 +702,37 @@ func ServiceGetFileDatasQuery(chain *core.BlockChain, query GetFileDatasRequest)
 		// how many batch of fileDatas should send by one header hash
 		cap = uint64(len(results))
 		batchFileDatas := make([][][]byte, 0)
-		for index,fd := range results{
-				encoded,err := rlp.EncodeToBytes(fd)
-				if err != nil {
-					log.Error("Failed to encode fileData", "err", err)
-				}else {
-					bytes += len(encoded)
-					if bytes >= fileDataSoftResponseLimit || len(batchFileDatas[batch]) >= maxFileDatasServe {
-						batch ++
-					}
+		for index, fd := range results {
+			encoded, err := rlp.EncodeToBytes(fd)
+			if err != nil {
+				log.Error("Failed to encode fileData", "err", err)
+			} else {
+				bytes += len(encoded)
+				if bytes >= fileDataSoftResponseLimit || len(batchFileDatas[batch]) >= maxFileDatasServe {
+					batch++
+				}
 
-					list := batchFileDatas[index]
-					if list == nil {
-						list = make([][]byte, 0)
-					}else {
-						list = append(list, encoded)
-					}
-					batchFileDatas[index] = list
+				list := batchFileDatas[index]
+				if list == nil {
+					list = make([][]byte, 0)
+				} else {
+					list = append(list, encoded)
 				}
+				batchFileDatas[index] = list
+			}
 		}
-		
+
 		//
-		for _,datas := range batchFileDatas {
-				btFD := &BantchFileData{
-					HeaderHash: hash,
-					Cap: cap,
-					Length: uint64(len(datas)),
-					FileDatas: datas,
-				}
-				resultList = append(resultList, btFD)
+		for _, datas := range batchFileDatas {
+			btFD := &BantchFileData{
+				HeaderHash: hash,
+				Cap:        cap,
+				Length:     uint64(len(datas)),
+				FileDatas:  datas,
+			}
+			resultList = append(resultList, btFD)
 		}
-		
+
 	}
 	return resultList
-} 
+}

@@ -24,12 +24,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/domicon-labs/op-geth"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/hexutil"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/rpc"
 )
 
 // Client defines typed wrappers for the Ethereum RPC API.
@@ -217,14 +217,14 @@ func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 }
 
 type RPCFileData struct {
-	Sender         common.Address   `json:"sender"`
-	Submitter      common.Address		`json:"submitter"`
-	Length         hexutil.Uint64		`json:"length"`
-	Index          hexutil.Uint64		`json:"index"`
-	Commitment     hexutil.Bytes    `json:"commitment"`	
-	Data           hexutil.Bytes		`json:"data"`
-	Sign  		  	 hexutil.Bytes		`json:"sign"`
-	TxHash         common.Hash      `json:"txhash"`
+	Sender     common.Address `json:"sender"`
+	Submitter  common.Address `json:"submitter"`
+	Length     hexutil.Uint64 `json:"length"`
+	Index      hexutil.Uint64 `json:"index"`
+	Commitment hexutil.Bytes  `json:"commitment"`
+	Data       hexutil.Bytes  `json:"data"`
+	Sign       hexutil.Bytes  `json:"sign"`
+	TxHash     common.Hash    `json:"txhash"`
 }
 
 type rpcTransaction struct {
@@ -296,64 +296,62 @@ func (ec *Client) TransactionCount(ctx context.Context, blockHash common.Hash) (
 	return uint(num), err
 }
 
-
-func (ec *Client) UploadFileData(ctx context.Context,data []byte) error {
+func (ec *Client) UploadFileData(ctx context.Context, data []byte) error {
 	var err error
-	tmpErr := ec.c.CallContext(ctx,&err,"eth_uploadFileData",data) 
+	tmpErr := ec.c.CallContext(ctx, &err, "eth_uploadFileData", data)
 	return tmpErr
 
 }
 
-func (ec *Client) UploadFileDataByParams(ctx context.Context,sender common.Address,submitter common.Address,index uint64,length uint64,gasprice uint64,data []byte,commitment []byte,sign []byte,txHash common.Hash) error {
+func (ec *Client) UploadFileDataByParams(ctx context.Context, sender common.Address, submitter common.Address, index uint64, length uint64, gasprice uint64, data []byte, commitment []byte, sign []byte, txHash common.Hash) error {
 	var err error
-	tmpErr := ec.c.CallContext(ctx,&err,"eth_uploadFileDataByParams",sender,submitter,index,length,gasprice,data,commitment,sign,txHash) 
+	tmpErr := ec.c.CallContext(ctx, &err, "eth_uploadFileDataByParams", sender, submitter, index, length, gasprice, data, commitment, sign, txHash)
 	return tmpErr
 }
 
-func (ec *Client) GetBatchFileDataByHashes(ctx context.Context,hashes rpc.TxHashes) (rpc.Result,error) {
+func (ec *Client) GetBatchFileDataByHashes(ctx context.Context, hashes rpc.TxHashes) (rpc.Result, error) {
 	var res rpc.Result
-	err := ec.c.CallContext(ctx,&res,"eth_batchFileDataByHashes",hashes)
-	return res,err
+	err := ec.c.CallContext(ctx, &res, "eth_batchFileDataByHashes", hashes)
+	return res, err
 }
 
-func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFileData,error){
+func (ec *Client) GetFileDataByHash(ctx context.Context, hash common.Hash) (RPCFileData, error) {
 	var fd RPCFileData
 	log.Info("client---GetFileDataByHash---iscalling---")
-	err := ec.c.CallContext(ctx,&fd,"eth_getFileDataByHash",hash)
-	return fd,err
+	err := ec.c.CallContext(ctx, &fd, "eth_getFileDataByHash", hash)
+	return fd, err
 }
 
-func (ec *Client) GetFileDataByCommitment(ctx context.Context,comimt []byte) (RPCFileData, error) {
+func (ec *Client) GetFileDataByCommitment(ctx context.Context, comimt []byte) (RPCFileData, error) {
 	var fd RPCFileData
 	log.Info("client---GetFileDataByCommitment---iscalling---")
-	err := ec.c.CallContext(ctx,&fd,"eth_getFileDataByCommitment",comimt)
-	return fd,err
+	err := ec.c.CallContext(ctx, &fd, "eth_getFileDataByCommitment", comimt)
+	return fd, err
 }
 
-
-func (ec *Client) CheckSelfState(ctx context.Context,blockNr rpc.BlockNumber) (string,error) {
+func (ec *Client) CheckSelfState(ctx context.Context, blockNr rpc.BlockNumber) (string, error) {
 	var str string
-	err := ec.c.CallContext(ctx,&str,"eth_checkSelfState",blockNr.String()) 
-	return str,err
+	err := ec.c.CallContext(ctx, &str, "eth_checkSelfState", blockNr.String())
+	return str, err
 }
 
-func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context,hashes rpc.TxHashes) (bool,error){
+func (ec *Client) DiskSaveFileDataWithHashes(ctx context.Context, hashes rpc.TxHashes) (bool, error) {
 	//var res rpc.Result
 	var res bool
-	err := ec.c.CallContext(ctx,&res,"eth_batchSaveFileDataWithHashes",hashes)	
-	return res,err
+	err := ec.c.CallContext(ctx, &res, "eth_batchSaveFileDataWithHashes", hashes)
+	return res, err
 }
 
-func (ec *Client) DiskSaveFileDataWithHash(ctx context.Context,hash common.Hash) (bool,error){
-	var flag bool 
-	err := ec.c.CallContext(ctx,&flag,"eth_diskSaveFileDataWithHash",hash)	
-	return flag,err
-}
-
-func (ec *Client) ChangeCurrentState(ctx context.Context,state int,blockNr rpc.BlockNumber) (bool,error) {
+func (ec *Client) DiskSaveFileDataWithHash(ctx context.Context, hash common.Hash) (bool, error) {
 	var flag bool
-	err := ec.c.CallContext(ctx,&flag,"eth_changeCurrentState",state,blockNr.String())
-	return flag,err
+	err := ec.c.CallContext(ctx, &flag, "eth_diskSaveFileDataWithHash", hash)
+	return flag, err
+}
+
+func (ec *Client) ChangeCurrentState(ctx context.Context, state int, blockNr rpc.BlockNumber) (bool, error) {
+	var flag bool
+	err := ec.c.CallContext(ctx, &flag, "eth_changeCurrentState", state, blockNr.String())
+	return flag, err
 }
 
 // TransactionInBlock returns a single transaction at index in the given block.

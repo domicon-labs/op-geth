@@ -25,12 +25,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/domicon-labs/op-geth"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/hexutil"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/internal/ethapi"
+	"github.com/domicon-labs/op-geth/rpc"
 )
 
 var (
@@ -105,14 +105,14 @@ func (api *FilterAPI) timeoutLoop(timeout time.Duration) {
 	}
 }
 
-func (api *FilterAPI) NewFileDataFilter() rpc.ID{
+func (api *FilterAPI) NewFileDataFilter() rpc.ID {
 	var (
 		newFileDatas   = make(chan []*types.FileData)
 		newFileDataSub = api.events.SubscribenNewFileDatas(newFileDatas)
 	)
 
 	api.filtersMu.Lock()
-	api.filters[newFileDataSub.ID] = &filter{typ: PendingFileDataSubscription, deadline: time.NewTimer(api.timeout),fds: make([]*types.FileData, 0) ,s: newFileDataSub}
+	api.filters[newFileDataSub.ID] = &filter{typ: PendingFileDataSubscription, deadline: time.NewTimer(api.timeout), fds: make([]*types.FileData, 0), s: newFileDataSub}
 	api.filtersMu.Unlock()
 
 	go func() {
@@ -135,7 +135,6 @@ func (api *FilterAPI) NewFileDataFilter() rpc.ID{
 
 	return newFileDataSub.ID
 }
-
 
 // NewPendingTransactionFilter creates a filter that fetches pending transactions
 // as transactions enter the pending state.
@@ -175,7 +174,7 @@ func (api *FilterAPI) NewPendingTransactionFilter(fullTx *bool) rpc.ID {
 
 // NewPendingTransactions creates a subscription that is triggered each time a
 // transaction enters the transaction pool.
-func (api *FilterAPI) NewFileData(ctx context.Context) (*rpc.Subscription,error){
+func (api *FilterAPI) NewFileData(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
@@ -194,8 +193,8 @@ func (api *FilterAPI) NewFileData(ctx context.Context) (*rpc.Subscription,error)
 				// TODO(rjl493456442) Send a batch of tx hashes in one notification
 				//latest := api.sys.backend.CurrentHeader()
 				for _, fd := range fds {
-						rpcFd := ethapi.NewRPCFileData(fd)
-						notifier.Notify(rpcSub.ID, rpcFd)
+					rpcFd := ethapi.NewRPCFileData(fd)
+					notifier.Notify(rpcSub.ID, rpcFd)
 				}
 			case <-rpcSub.Err():
 				fileDataSub.Unsubscribe()
@@ -210,8 +209,6 @@ func (api *FilterAPI) NewFileData(ctx context.Context) (*rpc.Subscription,error)
 	return rpcSub, nil
 
 }
-
-
 
 // NewPendingTransactions creates a subscription that is triggered each time a
 // transaction enters the transaction pool. If fullTx is true the full tx is

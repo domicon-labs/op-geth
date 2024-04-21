@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/console"
-	"github.com/ethereum/go-ethereum/internal/flags"
+	"github.com/domicon-labs/op-geth/cmd/utils"
+	"github.com/domicon-labs/op-geth/console"
+	"github.com/domicon-labs/op-geth/internal/flags"
 	"github.com/urfave/cli/v2"
 )
 

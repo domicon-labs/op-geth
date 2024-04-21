@@ -24,25 +24,25 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/beacon"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/forkid"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	pool "github.com/ethereum/go-ethereum/core/txpool/filedatapool"
-	"github.com/ethereum/go-ethereum/core/txpool"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/fetcher"
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/eth/protocols/snap"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/trie/triedb/pathdb"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/consensus"
+	"github.com/domicon-labs/op-geth/consensus/beacon"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/forkid"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/txpool"
+	pool "github.com/domicon-labs/op-geth/core/txpool/filedatapool"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/eth/downloader"
+	"github.com/domicon-labs/op-geth/eth/fetcher"
+	"github.com/domicon-labs/op-geth/eth/protocols/eth"
+	"github.com/domicon-labs/op-geth/eth/protocols/snap"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/event"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/metrics"
+	"github.com/domicon-labs/op-geth/p2p"
+	"github.com/domicon-labs/op-geth/trie/triedb/pathdb"
 )
 
 const (
@@ -50,7 +50,7 @@ const (
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 
-	fdChanSize = 60	
+	fdChanSize = 60
 	// txMaxBroadcastSize is the max size of a transaction that will be broadcasted.
 	// All transactions with a higher size will be announced and need to be fetched
 	// by the peer.
@@ -92,7 +92,7 @@ type fileDataPool interface {
 
 	// Get retrieves the fileData from local fileDataPool with given
 	// tx hash.
-	Get(hash common.Hash) (*types.FileData,pool.DISK_FILEDATA_STATE,error)
+	Get(hash common.Hash) (*types.FileData, pool.DISK_FILEDATA_STATE, error)
 
 	// Add should add the given transactions to the pool.
 	Add(fds []*types.FileData, local bool, sync bool) []error
@@ -106,15 +106,14 @@ type fileDataPool interface {
 	SubscribenFileDatasHash(ch chan<- core.FileDataHashEvent) event.Subscription
 }
 
-
 // handlerConfig is the collection of initialization parameters to create a full
 // node network handler.
 type handlerConfig struct {
-	Database       ethdb.Database         // Database for direct sync insertions
-	Chain          *core.BlockChain       // Blockchain to serve data from
-	TxPool         txPool                 // Transaction pool to propagate from
-	//modify by echo 
-	FileDataPool   fileDataPool			  // FileData Pool to propagate from
+	Database ethdb.Database   // Database for direct sync insertions
+	Chain    *core.BlockChain // Blockchain to serve data from
+	TxPool   txPool           // Transaction pool to propagate from
+	//modify by echo
+	FileDataPool   fileDataPool           // FileData Pool to propagate from
 	Merger         *consensus.Merger      // The manager for eth1/2 transition
 	Network        uint64                 // Network identifier to advertise
 	Sync           downloader.SyncMode    // Whether to snap or full sync
@@ -131,11 +130,11 @@ type handler struct {
 	snapSync atomic.Bool // Flag whether snap sync is enabled (gets disabled if we already have blocks)
 	synced   atomic.Bool // Flag whether we're considered synchronised (enables transaction processing)
 
-	database ethdb.Database
-	txpool   txPool
-	fileDataPool   fileDataPool  // FileData Pool to propagate from
-	chain    *core.BlockChain
-	maxPeers int
+	database     ethdb.Database
+	txpool       txPool
+	fileDataPool fileDataPool // FileData Pool to propagate from
+	chain        *core.BlockChain
+	maxPeers     int
 
 	noTxGossip bool
 
@@ -318,14 +317,14 @@ func newHandler(config *handlerConfig) (*handler, error) {
 		return h.txpool.Add(txs, false, false)
 	}
 
-	fetchFd := func (peer string,hashes []common.Hash) error {
+	fetchFd := func(peer string, hashes []common.Hash) error {
 		p := h.peers.peer(peer)
 		if p == nil {
 			return errors.New("unknown peer")
 		}
 
-		for _,hash := range hashes {
-			log.Info("fetchFd----","peer",peer,"hash",hash)
+		for _, hash := range hashes {
+			log.Info("fetchFd----", "peer", peer, "hash", hash)
 		}
 		return p.RequestFileDatas(hashes)
 	}
@@ -333,7 +332,7 @@ func newHandler(config *handlerConfig) (*handler, error) {
 		return h.fileDataPool.Add(fds, false, false)
 	}
 	h.txFetcher = fetcher.NewTxFetcher(h.txpool.Has, addTxs, fetchTx, h.removePeer)
-	h.fdFetcher = fetcher.NewFdFetcher(h.fileDataPool.Has,addFds,fetchFd,h.removePeer)
+	h.fdFetcher = fetcher.NewFdFetcher(h.fileDataPool.Has, addFds, fetchFd, h.removePeer)
 	h.chainSync = newChainSyncer(h)
 	return h, nil
 }
@@ -597,8 +596,8 @@ func (h *handler) Start(maxPeers int) {
 
 func (h *handler) Stop() {
 	h.txsSub.Unsubscribe()        // quits txBroadcastLoop
-	h.fdsSub.Unsubscribe()				// quits fileDataBroadcastLoop
-	h.fdHashSub.Unsubscribe()	  	// quits getFileDataHashLoop
+	h.fdsSub.Unsubscribe()        // quits fileDataBroadcastLoop
+	h.fdHashSub.Unsubscribe()     // quits getFileDataHashLoop
 	h.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 
 	// Quit chainSync and txsync64.
@@ -660,11 +659,11 @@ func (h *handler) BroadcastBlock(block *types.Block, propagate bool) {
 }
 
 // TODO fix
-func (h *handler) BroadcastFileData(fds types.FileDatas){
+func (h *handler) BroadcastFileData(fds types.FileDatas) {
 	var (
 		directCount int // Number of fileData sent directly to peers (duplicates included)
 		directPeers int // Number of peers that were sent fileData directly
-		
+
 		// annCount    int // Number of fileDatas announced across all peers (duplicates included)
 		// annPeers    int // Number of peers announced about fileDatas
 
@@ -672,19 +671,19 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 		//annos = make(map[*ethPeer][]common.Hash) // Set peer->hash to announce
 	)
 
-	for _,fd := range fds {
-		log.Info("BroadcastFileData---","需要广播的fileData",fd.TxHash.String())
+	for _, fd := range fds {
+		log.Info("BroadcastFileData---", "需要广播的fileData", fd.TxHash.String())
 		peers := h.peers.peerWithOutFileData(fd.TxHash)
 		//numDirect := len(peers)/2
-		// TODO dont do broadcast fileData directly 
+		// TODO dont do broadcast fileData directly
 		// Send the fileData unconditionally to a subset of our peers
 		for _, peer := range peers {
 			fdset[peer] = append(fdset[peer], fd.TxHash)
 		}
-		log.Info("全量广播----","length",len(peers))
+		log.Info("全量广播----", "length", len(peers))
 		// For the remaining peers, send announcement only
 		// for _, peer := range peers[numDirect:] {
-		// 	//for _, peer := range peers {	
+		// 	//for _, peer := range peers {
 		// 	annos[peer] = append(annos[peer], fd.TxHash)
 		// }
 		//log.Info("广播hash----","length",len(peers[numDirect:]))
@@ -693,7 +692,7 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 	for peer, hashes := range fdset {
 		directPeers++
 		directCount += len(hashes)
-		log.Info("BroadcastFileData----","peer info",peer.Info().Enode,"peer id",peer.ID())
+		log.Info("BroadcastFileData----", "peer info", peer.Info().Enode, "peer id", peer.ID())
 		peer.AsyncSendFileData(hashes)
 	}
 
@@ -704,33 +703,33 @@ func (h *handler) BroadcastFileData(fds types.FileDatas){
 	// 	peer.AsyncSendPooledFileDataHashes(hashes)
 	// }
 
-	log.Debug("Distributed fileData","bcastpeers", directPeers, "bcastcount", directCount,"plainfds",len(fds))
+	log.Debug("Distributed fileData", "bcastpeers", directPeers, "bcastcount", directCount, "plainfds", len(fds))
 }
 
-// GetFileDatasFileData should get fileData by txHash from remote peer. 
-func (h *handler) GetFileDatasFileData(hashs []common.Hash){
+// GetFileDatasFileData should get fileData by txHash from remote peer.
+func (h *handler) GetFileDatasFileData(hashs []common.Hash) {
 	var (
-		annCount    int // Number of fileDatas announced across all peers (duplicates included)
-		annPeers    int // Number of peers announced about fileDatas
+		annCount int // Number of fileDatas announced across all peers (duplicates included)
+		annPeers int // Number of peers announced about fileDatas
 
 		annos = make(map[*ethPeer][]common.Hash) // Set peer->hash to announce
 	)
 
-	for _,hash := range hashs {
-		log.Info("GetFileDatasFileData---","需要找的",hash.String())
+	for _, hash := range hashs {
+		log.Info("GetFileDatasFileData---", "需要找的", hash.String())
 		peers := h.peers.peersToGetFileData()
-		for _, peer := range peers[:] {	
-				//向非同步的节点索取
-			  // mod,_ :=	h.chainSync.modeAndLocalHead()
-				// if mod != downloader.FullSync {
-					annos[peer] = append(annos[peer], hash)
-				// }
+		for _, peer := range peers[:] {
+			//向非同步的节点索取
+			// mod,_ :=	h.chainSync.modeAndLocalHead()
+			// if mod != downloader.FullSync {
+			annos[peer] = append(annos[peer], hash)
+			// }
 		}
 	}
 	for peer, hashes := range annos {
 		annPeers++
 		annCount += len(hashes)
-		log.Info("GetFileDatasFileData----hash","peer info",peer.Info().Enode,"peer id",peer.ID())
+		log.Info("GetFileDatasFileData----hash", "peer info", peer.Info().Enode, "peer id", peer.ID())
 		peer.RequestFileDatas(hashes)
 	}
 }
@@ -819,14 +818,13 @@ func (h *handler) fdGetFileDatasLoop() {
 	for {
 		select {
 		case event := <-h.fdHashCh:
-			log.Info("fdGetFileDatasLoop----","hash",event.Hashes[0].String())
+			log.Info("fdGetFileDatasLoop----", "hash", event.Hashes[0].String())
 			h.GetFileDatasFileData(event.Hashes)
 		case <-h.fdHashSub.Err():
 			return
 		}
 	}
 }
-
 
 // txBroadcastLoop announces new transactions to connected peers.
 func (h *handler) txBroadcastLoop() {

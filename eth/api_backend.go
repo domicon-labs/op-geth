@@ -23,28 +23,28 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/bloombits"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/txpool"
-	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/eth/tracers"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/domicon-labs/op-geth"
+	"github.com/domicon-labs/op-geth/accounts"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/hexutil"
+	"github.com/domicon-labs/op-geth/consensus"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/bloombits"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/state"
+	"github.com/domicon-labs/op-geth/core/txpool"
+	"github.com/domicon-labs/op-geth/core/txpool/filedatapool"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/core/vm"
+	"github.com/domicon-labs/op-geth/eth/gasprice"
+	"github.com/domicon-labs/op-geth/eth/tracers"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/event"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/miner"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rlp"
+	"github.com/domicon-labs/op-geth/rpc"
 )
 
 // EthAPIBackend implements ethapi.Backend and tracers.Backend for full nodes
@@ -317,17 +317,17 @@ func (b *EthAPIBackend) UploadFileDataByParams(sender, submitter common.Address,
 	//return nil
 }
 
-func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData,filedatapool.DISK_FILEDATA_STATE,error) {
-	fd,state,err := b.eth.fdPool.Get(hash)
+func (b *EthAPIBackend) GetFileDataByHash(hash common.Hash) (*types.FileData, filedatapool.DISK_FILEDATA_STATE, error) {
+	fd, state, err := b.eth.fdPool.Get(hash)
 	log.Info("EthAPIBackend-----GetFileDataByHash", "txHash", hash.String())
 	if fd != nil {
-		return fd,state,nil
+		return fd, state, nil
 	}
-	return nil,state ,err
+	return nil, state, err
 }
 
 func (b *EthAPIBackend) GetFileDataByCommitment(comimt []byte) (*types.FileData, error) {
-	fd,_,err := b.eth.fdPool.GetByCommitment(comimt)
+	fd, _, err := b.eth.fdPool.GetByCommitment(comimt)
 	log.Info("EthAPIBackend-----GetFileDataByCommitment", "comimt", common.Bytes2Hex(comimt))
 	if fd != nil {
 		return fd, nil
@@ -335,9 +335,9 @@ func (b *EthAPIBackend) GetFileDataByCommitment(comimt []byte) (*types.FileData,
 	return nil, err
 }
 
-func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (string,error) {
+func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (string, error) {
 	bc := b.eth.BlockChain()
-  block := bc.GetBlockByNumber(uint64(blockNr))
+	block := bc.GetBlockByNumber(uint64(blockNr))
 	db := b.eth.chainDb
 	res := make([]*types.FileData, 0)
 	var totalCount uint64
@@ -350,27 +350,27 @@ func (b *EthAPIBackend) CheckSelfState(blockNr rpc.BlockNumber) (string,error) {
 			for i := 0; i < len(txs); i++ {
 				tx := txs[i]
 				if tx.Type() == types.SubmitTxType {
-					totalCount+=1
+					totalCount += 1
 				}
 			}
 			headHash := currentBlock.Hash()
-			fds := rawdb.ReadFileDatas(db,headHash,uint64(currentNum))
-			if len(fds)!= 0 {
-				 res = append(res, fds...)
+			fds := rawdb.ReadFileDatas(db, headHash, uint64(currentNum))
+			if len(fds) != 0 {
+				res = append(res, fds...)
 			}
 		}
 	}
 
-	infoStr := fmt.Sprintf("check goal block number is :%d should have:%d local data have:%d",blockNr.Int64(),int(totalCount),len(res))
+	infoStr := fmt.Sprintf("check goal block number is :%d should have:%d local data have:%d", blockNr.Int64(), int(totalCount), len(res))
 	if len(res) == int(totalCount) {
-		return infoStr,nil
+		return infoStr, nil
 	}
-	
-	return infoStr,errors.New("dont have full fileDatas with local node")
+
+	return infoStr, errors.New("dont have full fileDatas with local node")
 }
 
 func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]uint, []error) {
-	log.Info("EthAPIBackend-----GetFileDataByHashes", "len(hashes)",len(hashes.TxHashes))
+	log.Info("EthAPIBackend-----GetFileDataByHashes", "len(hashes)", len(hashes.TxHashes))
 	flags := make([]uint, len(hashes.TxHashes))
 	errs := make([]error, len(hashes.TxHashes))
 	for inde, hash := range hashes.TxHashes {
@@ -378,7 +378,7 @@ func (b *EthAPIBackend) BatchFileDataByHashes(hashes rpc.TxHashes) ([]uint, []er
 		switch state {
 		case filedatapool.DISK_FILEDATA_STATE_DEL:
 			flags[inde] = 0
-		case filedatapool.DISK_FILEDATA_STATE_SAVE:	
+		case filedatapool.DISK_FILEDATA_STATE_SAVE:
 			flags[inde] = 1
 		case filedatapool.DISK_FILEDATA_STATE_UNKNOW:
 			flags[inde] = 2
@@ -394,7 +394,7 @@ func (b *EthAPIBackend) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool
 	for index, hash := range hashes.TxHashes {
 		err := b.eth.fdPool.SaveFileDataToDisk(hash)
 		if err != nil {
-			flags[index] = false 
+			flags[index] = false
 			errs[index] = err
 		}
 		flags[index] = true
@@ -410,14 +410,14 @@ func (b *EthAPIBackend) DiskSaveFileDataWithHash(hash common.Hash) (bool, error)
 	return true, err
 }
 
-func (b *EthAPIBackend) DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
-	flag,err := b.eth.fdPool.SaveBatchFileDatasToDisk(hashed,*blockNrOrHash.BlockHash,uint64(*blockNrOrHash.BlockNumber))
-	return flag,err
+func (b *EthAPIBackend) DiskSaveFileDatas(hashed []common.Hash, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+	flag, err := b.eth.fdPool.SaveBatchFileDatasToDisk(hashed, *blockNrOrHash.BlockHash, uint64(*blockNrOrHash.BlockNumber))
+	return flag, err
 }
 
 // ChangeCurrentState implements ethapi.Backend.
-func (b *EthAPIBackend) ChangeCurrentState(state int,number rpc.BlockNumber) bool{
-	 return true
+func (b *EthAPIBackend) ChangeCurrentState(state int, number rpc.BlockNumber) bool {
+	return true
 }
 
 func (b *EthAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
@@ -462,7 +462,7 @@ func (b *EthAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction 
 }
 
 func (b *EthAPIBackend) GetPoolFileData(hash common.Hash) *types.FileData {
-	fd,_,err := b.eth.fdPool.Get(hash)
+	fd, _, err := b.eth.fdPool.Get(hash)
 	if err != nil {
 		log.Info("GetPoolFileData---get", "err", err.Error())
 	}

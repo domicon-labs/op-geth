@@ -12,17 +12,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	kzg "github.com/domicon-labs/kzg-sdk"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/state"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/event"
+	kzg "github.com/domicon-labs/op-geth/kzg-sdk"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/metrics"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rlp"
 )
 
 var (
@@ -40,31 +40,32 @@ var (
 )
 
 var (
-	knownFdMeter       = metrics.NewRegisteredMeter("fileData/known", nil)
-	invalidFdMeter     = metrics.NewRegisteredMeter("fileData/invalid", nil)
+	knownFdMeter   = metrics.NewRegisteredMeter("fileData/known", nil)
+	invalidFdMeter = metrics.NewRegisteredMeter("fileData/invalid", nil)
 
-	slotsGauge   = metrics.NewRegisteredGauge("fileData/slots", nil)
+	slotsGauge = metrics.NewRegisteredGauge("fileData/slots", nil)
 )
 
 var (
-	HashListKey = []byte("HashListKey")  //disk hash and disk time 
+	HashListKey = []byte("HashListKey") //disk hash and disk time
 
 )
 
 type DISK_FILEDATA_STATE uint
 
 const (
-	DISK_FILEDATA_STATE_DEL    DISK_FILEDATA_STATE = iota
-	DISK_FILEDATA_STATE_SAVE   
-	DISK_FILEDATA_STATE_UNKNOW  
+	DISK_FILEDATA_STATE_DEL DISK_FILEDATA_STATE = iota
+	DISK_FILEDATA_STATE_SAVE
+	DISK_FILEDATA_STATE_UNKNOW
 )
 
 const dSrsSize = 1 << 16
-type Config struct {
-	Journal   string           // Journal of local file to survive node restarts
-	Locals    []common.Address // Addresses that should be treated by default as local
 
-	Rejournal time.Duration    // Time interval to regenerate the local fileData journal
+type Config struct {
+	Journal string           // Journal of local file to survive node restarts
+	Locals  []common.Address // Addresses that should be treated by default as local
+
+	Rejournal time.Duration // Time interval to regenerate the local fileData journal
 	// JournalRemote controls whether journaling includes remote fileData or not.
 	// When true, all fileDatas loaded from the journal are treated as remote.
 	JournalRemote bool
@@ -72,14 +73,12 @@ type Config struct {
 	GlobalSlots   uint64 // Maximum number of executable fileData slots for all accounts
 }
 
-
-
 var DefaultConfig = Config{
-	Journal:  "fileData.rlp",
-	Lifetime: 10 * time.Second,
-	Rejournal: time.Hour,
+	Journal:       "fileData.rlp",
+	Lifetime:      10 * time.Second,
+	Rejournal:     time.Hour,
 	JournalRemote: true,
-	GlobalSlots: 4096,
+	GlobalSlots:   4096,
 }
 
 type BlockChain interface {
@@ -98,52 +97,52 @@ type BlockChain interface {
 }
 
 type DiskDetail struct {
-	TxHash        common.Hash 				`json:"TxHash"`
-	State         DISK_FILEDATA_STATE	`json:"State"`
-	TimeRecord    time.Time						`json:"TimeRecord"`
-	Data          types.FileData			`json:"Data"`
+	TxHash     common.Hash         `json:"TxHash"`
+	State      DISK_FILEDATA_STATE `json:"State"`
+	TimeRecord time.Time           `json:"TimeRecord"`
+	Data       types.FileData      `json:"Data"`
 }
 
 type HashCollect struct {
-   Hashes   []common.Hash  `json:"Hashes"`
+	Hashes []common.Hash `json:"Hashes"`
 }
 
-func newHashCollect() *HashCollect{
+func newHashCollect() *HashCollect {
 	return &HashCollect{
 		Hashes: make([]common.Hash, 0),
 	}
 }
 
 type FilePool struct {
-	config          Config
-	chainconfig     *params.ChainConfig
+	config           Config
+	chainconfig      *params.ChainConfig
 	chain            BlockChain
 	fileDataFeed     event.Feed
 	fileDataHashFeed event.Feed
-	mu              sync.RWMutex
-	currentHead     atomic.Pointer[types.Header] // Current head of the blockchain
-	currentState    *state.StateDB               // Current state in the blockchain head
-	signer          types.FdSigner
-	journal         *journal                // Journal of local fileData to back up to disk
-	subs            event.SubscriptionScope // Subscription scope to unsubscribe all on shutdown
-	all             *lookup
-	diskCache				*HashCollect  //	
-	collector       map[common.Hash]*types.FileData
-	beats           map[common.Hash]time.Time // Last heartbeat from each known account
-	reorgDoneCh     chan chan struct{}
-	reorgShutdownCh chan struct{}  // requests shutdown of scheduleReorgLoop
-	wg              sync.WaitGroup // tracks loop, scheduleReorgLoop
-	initDoneCh      chan struct{}  // is closed once the pool is initialized (for tests)
+	mu               sync.RWMutex
+	currentHead      atomic.Pointer[types.Header] // Current head of the blockchain
+	currentState     *state.StateDB               // Current state in the blockchain head
+	signer           types.FdSigner
+	journal          *journal                // Journal of local fileData to back up to disk
+	subs             event.SubscriptionScope // Subscription scope to unsubscribe all on shutdown
+	all              *lookup
+	diskCache        *HashCollect //
+	collector        map[common.Hash]*types.FileData
+	beats            map[common.Hash]time.Time // Last heartbeat from each known account
+	reorgDoneCh      chan chan struct{}
+	reorgShutdownCh  chan struct{}  // requests shutdown of scheduleReorgLoop
+	wg               sync.WaitGroup // tracks loop, scheduleReorgLoop
+	initDoneCh       chan struct{}  // is closed once the pool is initialized (for tests)
 }
 
 func New(config Config, chain BlockChain) *FilePool {
 	fp := &FilePool{
 		config:          config,
-		chain:			 		 chain,		
+		chain:           chain,
 		chainconfig:     chain.Config(),
 		signer:          types.LatestFdSigner(chain.Config()),
 		all:             newLookup(),
-		diskCache:			 newHashCollect(),
+		diskCache:       newHashCollect(),
 		collector:       make(map[common.Hash]*types.FileData),
 		beats:           make(map[common.Hash]time.Time),
 		reorgDoneCh:     make(chan chan struct{}),
@@ -217,43 +216,43 @@ func (fp *FilePool) loop() {
 			return
 
 		// remove FileData from disk
-		case <- remove.C:
-		 diskDb := fp.currentState.Database().DiskDB()
-		 data,err := diskDb.Get(HashListKey)
-		 if err != nil || len(data) == 0 {
-			continue
-		 }
+		case <-remove.C:
+			diskDb := fp.currentState.Database().DiskDB()
+			data, err := diskDb.Get(HashListKey)
+			if err != nil || len(data) == 0 {
+				continue
+			}
 
-		var coll HashCollect
-		err = json.Unmarshal(data,&coll)
-		if err != nil {
-			continue
-		}
-
-		var detail DiskDetail
-		for index,txHash := range coll.Hashes {
-			data,err := rawdb.ReadFileDataDetail(diskDb,txHash)
+			var coll HashCollect
+			err = json.Unmarshal(data, &coll)
 			if err != nil {
 				continue
 			}
-		
-			err = json.Unmarshal(data,&detail)
-			if err == nil {
-				if detail.TimeRecord.Before(time.Now().Add(3*24*time.Hour)) {
-					detail.State = DISK_FILEDATA_STATE_DEL
+
+			var detail DiskDetail
+			for index, txHash := range coll.Hashes {
+				data, err := rawdb.ReadFileDataDetail(diskDb, txHash)
+				if err != nil {
+					continue
 				}
-				if detail.State == DISK_FILEDATA_STATE_DEL {
-					//just for test net v1.0
-					detail.State = DISK_FILEDATA_STATE_SAVE
-					
-					data, _ := rlp.EncodeToBytes(detail)
-					rawdb.WriteFileDataDetail(diskDb,data,txHash)
-					fp.diskCache.Hashes = removeElement(fp.diskCache.Hashes,index)
+
+				err = json.Unmarshal(data, &detail)
+				if err == nil {
+					if detail.TimeRecord.Before(time.Now().Add(3 * 24 * time.Hour)) {
+						detail.State = DISK_FILEDATA_STATE_DEL
+					}
+					if detail.State == DISK_FILEDATA_STATE_DEL {
+						//just for test net v1.0
+						detail.State = DISK_FILEDATA_STATE_SAVE
+
+						data, _ := rlp.EncodeToBytes(detail)
+						rawdb.WriteFileDataDetail(diskDb, data, txHash)
+						fp.diskCache.Hashes = removeElement(fp.diskCache.Hashes, index)
+					}
 				}
 			}
-		}
-		collData,_ := json.Marshal(fp.diskCache)
-		diskDb.Put(HashListKey,collData)	
+			collData, _ := json.Marshal(fp.diskCache)
+			diskDb.Put(HashListKey, collData)
 
 		// Handle inactive txHash fileData eviction
 		case <-evict.C:
@@ -262,9 +261,9 @@ func (fp *FilePool) loop() {
 				// Any non-locals old enough should be removed
 				if time.Since(fp.beats[txHash]) > fp.config.Lifetime {
 					for txHash := range fp.collector {
-						for ind,hash := range fp.diskCache.Hashes {
+						for ind, hash := range fp.diskCache.Hashes {
 							if hash == txHash {
-								removeElement(fp.diskCache.Hashes,ind)
+								removeElement(fp.diskCache.Hashes, ind)
 							}
 						}
 						fp.removeFileData(txHash)
@@ -312,29 +311,29 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 		return errors.New("file pool dont have fileData")
 	}
 	diskDb := fp.currentState.Database().DiskDB()
-	detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
-	data,_ := json.Marshal(detail)
-	rawdb.WriteFileDataDetail(diskDb,data,hash)
+	detail := DiskDetail{TxHash: hash, State: DISK_FILEDATA_STATE_SAVE, TimeRecord: time.Now(), Data: *fileData}
+	data, _ := json.Marshal(detail)
+	rawdb.WriteFileDataDetail(diskDb, data, hash)
 	fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
-	log.Info("SaveFileDataToDisk----","txHash",hash.String())
+	log.Info("SaveFileDataToDisk----", "txHash", hash.String())
 	fp.removeFileData(hash)
 	return nil
 }
 
-func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common.Hash,blcNr uint64) (bool,error) {
-	log.Info("SaveBatchFileDatasToDisk----","hashes length",len(hashes),"block num",blcNr,"blcHash",blcHash.Hex())	
-	list := make([]*types.FileData,0)
-	for _,hash := range hashes {
+func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash, blcHash common.Hash, blcNr uint64) (bool, error) {
+	log.Info("SaveBatchFileDatasToDisk----", "hashes length", len(hashes), "block num", blcNr, "blcHash", blcHash.Hex())
+	list := make([]*types.FileData, 0)
+	for _, hash := range hashes {
 		fd, ok := fp.all.collector[hash]
 		if !ok {
-			return false,errors.New("don not have that fileDATA")
+			return false, errors.New("don not have that fileDATA")
 		}
-		block := fp.chain.GetBlock(blcHash,blcNr)
+		block := fp.chain.GetBlock(blcHash, blcNr)
 		if block == nil {
-			return false,nil
+			return false, nil
 		}
 		list = append(list, fd)
-		state,err := fp.chain.StateAt(block.Header().Root)
+		state, err := fp.chain.StateAt(block.Header().Root)
 		if err == nil {
 			fp.currentState = state
 			fp.currentHead.Store(block.Header())
@@ -342,23 +341,23 @@ func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common
 	}
 
 	db := fp.currentState.Database().DiskDB()
-	rawdb.WriteFileDatas(db,blcHash,blcNr,list)
-	
-	for _,hash := range hashes {
-		fd,ok := fp.all.collector[hash]
+	rawdb.WriteFileDatas(db, blcHash, blcNr, list)
+
+	for _, hash := range hashes {
+		fd, ok := fp.all.collector[hash]
 		if ok {
-			detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fd}
-			data,err := json.Marshal(detail)
+			detail := DiskDetail{TxHash: hash, State: DISK_FILEDATA_STATE_SAVE, TimeRecord: time.Now(), Data: *fd}
+			data, err := json.Marshal(detail)
 			if err != nil {
-				log.Info("SaveBatchFileDatasToDisk-----EncodeToBytes bantch","err",err.Error())
+				log.Info("SaveBatchFileDatasToDisk-----EncodeToBytes bantch", "err", err.Error())
 			}
-			rawdb.WriteFileDataDetail(db,data,hash)
-			rawdb.WriteCommitToHash(db,fd.Commitment,fd.TxHash)
+			rawdb.WriteFileDataDetail(db, data, hash)
+			rawdb.WriteCommitToHash(db, fd.Commitment, fd.TxHash)
 		}
 		fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 		fp.removeFileData(hash)
 	}
-	return true,nil
+	return true, nil
 }
 
 func (fp *FilePool) removeFileData(hash common.Hash) error {
@@ -373,81 +372,78 @@ func (fp *FilePool) removeFileData(hash common.Hash) error {
 }
 
 // cached with the given hash.
-func (fp *FilePool) Has(hash common.Hash) bool{
+func (fp *FilePool) Has(hash common.Hash) bool {
 	fd := fp.get(hash)
 	return fd != nil
 }
 
-func (fp *FilePool) GetByCommitment(comimt []byte) (*types.FileData,DISK_FILEDATA_STATE,error){
+func (fp *FilePool) GetByCommitment(comimt []byte) (*types.FileData, DISK_FILEDATA_STATE, error) {
 	diskDb := fp.currentState.Database().DiskDB()
-	hashData,err := rawdb.ReadCommitToHash(diskDb,comimt)
+	hashData, err := rawdb.ReadCommitToHash(diskDb, comimt)
 	if err != nil && len(hashData) == 0 {
-		log.Info("GetByCommitment---err","comimt",&comimt)
-		return nil,DISK_FILEDATA_STATE_UNKNOW,errors.New("dont have that commit")
+		log.Info("GetByCommitment---err", "comimt", &comimt)
+		return nil, DISK_FILEDATA_STATE_UNKNOW, errors.New("dont have that commit")
 	}
 
 	hash := common.BytesToHash(hashData)
 	return fp.Get(hash)
-}  
-
+}
 
 // Get retrieves the fileData from local fileDataPool with given
 // tx hash.
-func (fp *FilePool) Get(hash common.Hash) (*types.FileData,DISK_FILEDATA_STATE,error){
+func (fp *FilePool) Get(hash common.Hash) (*types.FileData, DISK_FILEDATA_STATE, error) {
 	var getTimes uint64
 Lable:
 	fd := fp.get(hash)
 	if fd == nil {
 		diskDb := fp.currentState.Database().DiskDB()
-		data,err := rawdb.ReadFileDataDetail(diskDb,hash)
+		data, err := rawdb.ReadFileDataDetail(diskDb, hash)
 		if err != nil {
-				log.Info("FilePool 读取磁盘失败","err",err.Error())
+			log.Info("FilePool 读取磁盘失败", "err", err.Error())
 		}
-		if len(data) == 0{
-				log.Info("本地节点没有从需要从远端要--------","hash",hash.String())
-				if getTimes < 1 {
-					fp.fileDataHashFeed.Send(core.FileDataHashEvent{Hashes: []common.Hash{hash}})
-					log.Info("本地节点没有从需要从远端要---进来了么")
-				}
-				time.Sleep(200 * time.Millisecond)
-				getTimes ++
-				if getTimes <= 1 {
-					goto Lable
-				}
+		if len(data) == 0 {
+			log.Info("本地节点没有从需要从远端要--------", "hash", hash.String())
+			if getTimes < 1 {
+				fp.fileDataHashFeed.Send(core.FileDataHashEvent{Hashes: []common.Hash{hash}})
+				log.Info("本地节点没有从需要从远端要---进来了么")
+			}
+			time.Sleep(200 * time.Millisecond)
+			getTimes++
+			if getTimes <= 1 {
+				goto Lable
+			}
 
-				currentPath, _ := os.Getwd()
-				file, err := os.OpenFile(currentPath+"/unknowTxHash.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-				str := fmt.Sprintf("can not find fileData by TxHash is： %s time to ask ： %s",hash.Hex(),time.Now().String())
-				writeStr := str + "\n"
-				if _, err := file.WriteString(writeStr); err != nil {
-					log.Info("WriteString unknowTxHash err",err.Error())
-				}
-    		file.Close()
-				
-				return nil,DISK_FILEDATA_STATE_UNKNOW,err
+			currentPath, _ := os.Getwd()
+			file, err := os.OpenFile(currentPath+"/unknowTxHash.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+			str := fmt.Sprintf("can not find fileData by TxHash is： %s time to ask ： %s", hash.Hex(), time.Now().String())
+			writeStr := str + "\n"
+			if _, err := file.WriteString(writeStr); err != nil {
+				log.Info("WriteString unknowTxHash err", err.Error())
+			}
+			file.Close()
+
+			return nil, DISK_FILEDATA_STATE_UNKNOW, err
 		}
 
 		if len(data) > 0 {
 			var detail DiskDetail
-			err := json.Unmarshal(data,&detail)
+			err := json.Unmarshal(data, &detail)
 			if err != nil {
-				return nil,DISK_FILEDATA_STATE_UNKNOW,err
+				return nil, DISK_FILEDATA_STATE_UNKNOW, err
 			}
 			if detail.State == DISK_FILEDATA_STATE_DEL {
-				return &detail.Data,detail.State,errors.New("fileData already del")
+				return &detail.Data, detail.State, errors.New("fileData already del")
 			}
-			return &detail.Data,detail.State,nil
+			return &detail.Data, detail.State, nil
 		}
 	}
-	return fd,DISK_FILEDATA_STATE_SAVE,nil
+	return fd, DISK_FILEDATA_STATE_SAVE, nil
 }
-
 
 // get returns a fileData if it is contained in the pool and nil otherwise.
 func (fp *FilePool) get(hash common.Hash) *types.FileData {
 	return fp.all.Get(hash)
 }
-
 
 // addRemotesSync is like addRemotes, but waits for pool reorganization. Tests use this method.
 func (fp *FilePool) addRemotesSync(fds []*types.FileData) []error {
@@ -495,7 +491,7 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 
 		txHash := fd.TxHash.String()
 
-		log.Info("FilePool----Add","txHash",txHash)
+		log.Info("FilePool----Add", "txHash", txHash)
 		// Exclude fileDatas with basic errors, e.g invalid signatures
 		if err := fp.validateFileDataSignature(fd, local); err != nil {
 			errs[i] = err
@@ -507,7 +503,7 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 	if len(news) == 0 {
 		return errs
 	}
-	
+
 	fp.mu.Lock()
 	newErrs := fp.addFdsLocked(news, local)
 	fp.mu.Unlock()
@@ -516,7 +512,7 @@ func (fp *FilePool) Add(fds []*types.FileData, local, sync bool) []error {
 	var final = make([]*types.FileData, 0)
 	for index, err := range newErrs {
 		if err == nil {
-			final = append(final,news[index])
+			final = append(final, news[index])
 		}
 		for errs[nilSlot] != nil {
 			nilSlot++
@@ -544,7 +540,7 @@ func (fp *FilePool) addFdsLocked(fds []*types.FileData, local bool) []error {
 }
 
 // add validates a fileData and inserts it into the non-executable queue for later
-// saved. 
+// saved.
 func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err error) {
 	// If the fileData is already known, discard it
 	hash := fd.TxHash
@@ -556,7 +552,7 @@ func (fp *FilePool) add(fd *types.FileData, local bool) (replaced bool, err erro
 
 	//
 	if uint64(fp.all.Slots()+1) > fp.config.GlobalSlots {
-		return false,ErrFdPoolOverflow
+		return false, ErrFdPoolOverflow
 	}
 
 	fp.journalFd(hash, fd)
@@ -587,35 +583,35 @@ func (fp *FilePool) validateFileDataSignature(fd *types.FileData, local bool) er
 	if fd.Length != uint64(len(fd.Data)) {
 		return errors.New("fileData data length not match legth")
 	}
-	if len(fd.SignData) == 0  {
+	if len(fd.SignData) == 0 {
 		return errors.New("fileData signature is empty")
 	}
-	recoverAddr,err := types.FdSender(fp.signer,fd)
-	if err != nil || bytes.Equal(recoverAddr.Bytes(),fd.Sender.Bytes()) {
-		log.Info("validateFileDataSignature----","recover",recoverAddr.Hex(),"sender",fd.Sender.Hex())
+	recoverAddr, err := types.FdSender(fp.signer, fd)
+	if err != nil || bytes.Equal(recoverAddr.Bytes(), fd.Sender.Bytes()) {
+		log.Info("validateFileDataSignature----", "recover", recoverAddr.Hex(), "sender", fd.Sender.Hex())
 		return errors.New("signature is invalid")
 	}
-	
+
 	currentPath, _ := os.Getwd()
-	path := strings.Split(currentPath,"/core")[0] + "/srs"
-	domiconSDK,err := kzg.InitDomiconSdk(dSrsSize,path)
+	path := strings.Split(currentPath, "/core")[0] + "/srs"
+	domiconSDK, err := kzg.InitDomiconSdk(dSrsSize, path)
 	if err != nil {
 		return err
 	}
 
-	digst,err := domiconSDK.GenerateDataCommit(fd.Data)
+	digst, err := domiconSDK.GenerateDataCommit(fd.Data)
 	if err != nil {
 		return errors.New("GenerateDataCommit failed")
 	}
 
 	fixedArray := digst.Bytes()
-  slice := fixedArray[:]
+	slice := fixedArray[:]
 	if !bytes.Equal(slice, fd.Commitment) {
 		generateCommit := hex.EncodeToString(slice)
 		orginCommit := hex.EncodeToString(fd.Commitment)
-		log.Info("validateFileDataSignature---Commitment","generateCommit",generateCommit,"orginCommit",orginCommit)
+		log.Info("validateFileDataSignature---Commitment", "generateCommit", generateCommit, "orginCommit", orginCommit)
 		return errors.New("commitment is not match the data")
-	}	
+	}
 
 	return nil
 }
@@ -636,7 +632,7 @@ func (fp *FilePool) Close() error {
 }
 
 type lookup struct {
-	slots   int
+	slots     int
 	lock      sync.RWMutex
 	collector map[common.Hash]*types.FileData
 }
@@ -699,7 +695,6 @@ func (t *lookup) Slots() int {
 	return t.slots
 }
 
-
 // Remove removes a fileData from the lookup.
 func (t *lookup) Remove(hash common.Hash) {
 	t.lock.Lock()
@@ -709,7 +704,6 @@ func (t *lookup) Remove(hash common.Hash) {
 	slotsGauge.Update(int64(t.slots))
 	delete(t.collector, hash)
 }
-
 
 // // scheduleReorgLoop schedules runs of reset and promoteExecutables. Code above should not
 // // call those methods directly, but request them being run using requestReset and

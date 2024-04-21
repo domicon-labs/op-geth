@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/domicon-labs/op-geth/accounts"
+	"github.com/domicon-labs/op-geth/accounts/keystore"
+	"github.com/domicon-labs/op-geth/cmd/utils"
+	"github.com/domicon-labs/op-geth/crypto"
+	"github.com/domicon-labs/op-geth/log"
 	"github.com/urfave/cli/v2"
 )
 

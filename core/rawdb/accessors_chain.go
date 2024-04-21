@@ -24,14 +24,14 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/consensus/misc/eip4844"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/crypto"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rlp"
 	"golang.org/x/exp/slices"
 )
 
@@ -163,8 +163,8 @@ func WriteHeaderNumber(db ethdb.KeyValueWriter, hash common.Hash, number uint64)
 	}
 }
 
-// WriteBlockStateByNumber store the hash -> state 
-func WriteBlockStateByNumber(db ethdb.KeyValueWriter,hash common.Hash,state uint64) error {
+// WriteBlockStateByNumber store the hash -> state
+func WriteBlockStateByNumber(db ethdb.KeyValueWriter, hash common.Hash, state uint64) error {
 	key := headerNumberStateKey(hash)
 	data := encodeBlockNumber(state)
 	if err := db.Put(key, data); err != nil {
@@ -695,35 +695,32 @@ func DeleteReceipts(db ethdb.KeyValueWriter, hash common.Hash, number uint64) {
 // ReadFileDatas retrieves all the fileDatas belonging to a block, including
 // its corresponding metadata fields. If it is unable to populate these metadata
 // fields then nil is returned.
-//
 func ReadFileDatas(db ethdb.Reader, hash common.Hash, number uint64) []*types.FileData {
-	data,err := db.Get(blockBodyKey(number,hash))
+	data, err := db.Get(blockBodyKey(number, hash))
 	if err != nil || len(data) == 0 {
 		return nil
 	}
 
-	fds := make([]*types.FileData,0)  
-	err = json.Unmarshal(data,&fds)
+	fds := make([]*types.FileData, 0)
+	err = json.Unmarshal(data, &fds)
 	if err != nil {
 		return nil
 	}
 	return fds
 }
 
-
 // WriteFileDatas stores all the fileDatas belonging to a block.
-func WriteFileDatas(db ethdb.KeyValueWriter, hash common.Hash, number uint64,fileDatas []*types.FileData) {
-	 data,err := json.Marshal(fileDatas)
-	 if err != nil {
-			log.Error("WriteFileDatas--json marshal failed","err",err.Error())
-	 }
+func WriteFileDatas(db ethdb.KeyValueWriter, hash common.Hash, number uint64, fileDatas []*types.FileData) {
+	data, err := json.Marshal(fileDatas)
+	if err != nil {
+		log.Error("WriteFileDatas--json marshal failed", "err", err.Error())
+	}
 
-	 err = db.Put(blockFileDatasKey(number,hash),data)
-	 if err != nil {
-			log.Error("WriteFileDatas--desk save failed","err",err.Error())
-	 }
+	err = db.Put(blockFileDatasKey(number, hash), data)
+	if err != nil {
+		log.Error("WriteFileDatas--desk save failed", "err", err.Error())
+	}
 }
-
 
 // storedReceiptRLP is the storage encoding of a receipt.
 // Re-definition in core/types/receipt.go.

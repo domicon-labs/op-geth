@@ -25,11 +25,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/console/prompt"
-	"github.com/ethereum/go-ethereum/p2p/dnsdisc"
-	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/domicon-labs/op-geth/accounts/keystore"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/console/prompt"
+	"github.com/domicon-labs/op-geth/p2p/dnsdisc"
+	"github.com/domicon-labs/op-geth/p2p/enode"
 	"github.com/urfave/cli/v2"
 )
 

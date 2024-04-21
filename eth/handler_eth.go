@@ -22,13 +22,13 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/eth/protocols/eth"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/p2p/enode"
+	"github.com/domicon-labs/op-geth/rlp"
 )
 
 // ethHandler implements the eth.Backend interface to handle the various network
@@ -109,34 +109,34 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 
 	case *eth.FileDataPacket:
 		return h.fdFetcher.Enqueue(peer.ID(), *packet, true)
-	
+
 	case *eth.NewPooledFileDataHashesPacket67:
 		return h.fdFetcher.Notify(peer.ID(), nil, nil, *packet)
 
-	case *eth.NewPooledFileDataHashesPacket68:	
+	case *eth.NewPooledFileDataHashesPacket68:
 		return h.fdFetcher.Notify(peer.ID(), nil, packet.Sizes, packet.Hashes)
 
-	case *eth.PooledFileDataResponse:	
+	case *eth.PooledFileDataResponse:
 		return h.fdFetcher.Enqueue(peer.ID(), *packet, true)
 
 	case *eth.FileDatasResponse:
 
-		log.Info("handle-----receive FileDatasResponse")	
+		log.Info("handle-----receive FileDatasResponse")
 		var btfd eth.BantchFileData
-	  err := rlp.DecodeBytes(*packet,&btfd)
+		err := rlp.DecodeBytes(*packet, &btfd)
 		if err != nil {
-			log.Error("handle---FileDatasResponse msg decode","err",err.Error())
+			log.Error("handle---FileDatasResponse msg decode", "err", err.Error())
 		}
 		//decode to fileData
 		fds := make([]*types.FileData, len(btfd.FileDatas))
-		for indx,data := range btfd.FileDatas {
-			var fd types.FileData	
-			err = rlp.DecodeBytes(data,&fd)
+		for indx, data := range btfd.FileDatas {
+			var fd types.FileData
+			err = rlp.DecodeBytes(data, &fd)
 			if err == nil {
 				fds[indx] = &fd
 			}
 		}
-		return h.fdFetcher.Enqueue(peer.ID(),fds,true)
+		return h.fdFetcher.Enqueue(peer.ID(), fds, true)
 
 	default:
 		return fmt.Errorf("unexpected eth packet type: %T", packet)

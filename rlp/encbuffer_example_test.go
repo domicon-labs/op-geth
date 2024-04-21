@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/domicon-labs/op-geth/rlp"
 )
 
 func ExampleEncoderBuffer() {

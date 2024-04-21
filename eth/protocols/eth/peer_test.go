@@ -23,9 +23,9 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/p2p"
+	"github.com/domicon-labs/op-geth/p2p/enode"
 )
 
 // testPeer is a simulated peer to allow testing direct network calls.
@@ -45,7 +45,7 @@ func newTestPeer(name string, version uint, backend Backend) (*testPeer, <-chan 
 	var id enode.ID
 	rand.Read(id[:])
 
-	peer := NewPeer(version, p2p.NewPeer(id, name, nil), net, backend.TxPool(),backend.FildDataPool())
+	peer := NewPeer(version, p2p.NewPeer(id, name, nil), net, backend.TxPool(), backend.FildDataPool())
 	errc := make(chan error, 1)
 	go func() {
 		defer app.Close()

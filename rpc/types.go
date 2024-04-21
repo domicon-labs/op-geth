@@ -23,8 +23,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/hexutil"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -59,33 +59,33 @@ type jsonWriter interface {
 	remoteAddr() string
 }
 
-
-type TxHashes struct{
-	TxHashes       []common.Hash      `json:"txHashes"`
-	BlockHash 		  common.Hash				`json:"blockHash"`
-	BlockNumber     BlockNumber				`json:"blockNumber"`
+type TxHashes struct {
+	TxHashes    []common.Hash `json:"txHashes"`
+	BlockHash   common.Hash   `json:"blockHash"`
+	BlockNumber BlockNumber   `json:"blockNumber"`
 }
 
 func (ts *TxHashes) String() string {
-		data,err := json.Marshal(ts)	
-		if err != nil {
-			return ""
-		}
-		return string(data)
+	data, err := json.Marshal(ts)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 type DataState uint //数据状态
 
 const (
-	DataState_SAVE   DataState= iota
+	DataState_SAVE DataState = iota
 	DataState_DEL
-	DataState_UNKNOW 
+	DataState_UNKNOW
 )
-type Result struct{
-	Flags  					[]DataState    `json:"flags"`
+
+type Result struct {
+	Flags []DataState `json:"flags"`
 }
 
-func NewResult(length uint64) *Result{
+func NewResult(length uint64) *Result {
 	return &Result{
 		Flags: make([]DataState, length),
 	}

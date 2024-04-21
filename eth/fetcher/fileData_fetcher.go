@@ -8,19 +8,18 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/mclock"
+	"github.com/domicon-labs/op-geth/core/txpool/filedatapool"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/metrics"
 )
 
 var (
 	// maxFdAnnounces is the maximum number of unique fileData a peer
 	// can announce in a short time.
 	maxFdAnnounces = 4096
-
 
 	// maxFdRetrievals is the maximum number of fileData that can be fetched
 	// in one request. The rationale for picking 256 is to have a reasonabe lower
@@ -32,7 +31,6 @@ var (
 	// cause us to request more data than we'd expect.
 	maxFdRetrievals = 256
 
-
 	// maxFdRetrievalSize is the max number of bytes that delivered fileData
 	// should weigh according to the announcements. The 500KB was chosen to limit
 	// retrieving a maximum of one fileData at a time to minimize hogging
@@ -42,7 +40,7 @@ var (
 	// fdGatherSlack is the interval used to collate almost-expired announces
 	// with network fetches.
 	fdGatherSlack = 100 * time.Millisecond
-	
+
 	// fdArriveTimeout is the time allowance before an announced transaction is
 	// explicitly requested.
 	fdArriveTimeout = 500 * time.Millisecond
@@ -52,10 +50,9 @@ var (
 )
 
 var (
-
-	fdAnnounceInMeter          = metrics.NewRegisteredMeter("eth/fetcher/filedata/announces/in", nil)
-	fdAnnounceKnownMeter       = metrics.NewRegisteredMeter("eth/fetcher/filedata/announces/known", nil)
-	fdAnnounceDOSMeter         = metrics.NewRegisteredMeter("eth/fetcher/filedata/announces/dos", nil)
+	fdAnnounceInMeter    = metrics.NewRegisteredMeter("eth/fetcher/filedata/announces/in", nil)
+	fdAnnounceKnownMeter = metrics.NewRegisteredMeter("eth/fetcher/filedata/announces/known", nil)
+	fdAnnounceDOSMeter   = metrics.NewRegisteredMeter("eth/fetcher/filedata/announces/dos", nil)
 
 	fdBroadcastInMeter          = metrics.NewRegisteredMeter("eth/fetcher/filedata/broadcasts/in", nil)
 	fdBroadcastKnownMeter       = metrics.NewRegisteredMeter("eth/fetcher/filedata/broadcasts/known", nil)
@@ -70,14 +67,13 @@ var (
 	fdReplyKnownMeter       = metrics.NewRegisteredMeter("eth/fetcher/filedata/replies/known", nil)
 	fdReplyOtherRejectMeter = metrics.NewRegisteredMeter("eth/fetcher/filedata/replies/otherreject", nil)
 
-	fdFetcherWaitingPeers   = metrics.NewRegisteredGauge("eth/fetcher/filedata/waiting/peers", nil)
-    fdFetcherWaitingHashes  = metrics.NewRegisteredGauge("eth/fetcher/filedata/waiting/hashes", nil)
+	fdFetcherWaitingPeers  = metrics.NewRegisteredGauge("eth/fetcher/filedata/waiting/peers", nil)
+	fdFetcherWaitingHashes = metrics.NewRegisteredGauge("eth/fetcher/filedata/waiting/hashes", nil)
 	//fdFetcherQueueingPeers  = metrics.NewRegisteredGauge("eth/fetcher/filedata/queueing/peers", nil)
 	//fdFetcherQueueingHashes = metrics.NewRegisteredGauge("eth/fetcher/filedata/queueing/hashes", nil)
 	fdFetcherFetchingPeers  = metrics.NewRegisteredGauge("eth/fetcher/filedata/fetching/peers", nil)
 	fdFetcherFetchingHashes = metrics.NewRegisteredGauge("eth/fetcher/filedata/fetching/hashes", nil)
 )
-
 
 // fdDelivery is the notification that a batch of fileDatas have been added
 // to the pool and should be untracked.
@@ -110,7 +106,6 @@ type fdRequest struct {
 	time   mclock.AbsTime           // Timestamp of the request
 }
 
-
 // fdDrop is the notification that a peer has disconnected.
 type fdDrop struct {
 	peer string
@@ -128,7 +123,6 @@ type FileDataFetcher struct {
 	waittime  map[common.Hash]mclock.AbsTime         // Timestamps when transactions were added to the waitlist
 	waitslots map[string]map[common.Hash]*fdMetadata // Waiting announcements grouped by peer (DoS protection)
 
-
 	// Stage 2: Queue of fileDatas that waiting to be allocated to some peer
 	// to be retrieved directly.
 	announces map[string]map[common.Hash]*fdMetadata // Set of announced fileData, grouped by origin peer
@@ -142,16 +136,15 @@ type FileDataFetcher struct {
 	alternates map[common.Hash]map[string]struct{} // In-flight fileData alternate origins if retrieval fails
 
 	// Callbacks
-	hasFd    func(common.Hash) bool             // Retrieves a fd from the local fdpool
-	addFds   func([]*types.FileData) []error 	// Insert a batch of fileData into local fdpool
-	fetchFds func(string, []common.Hash) error  // Retrieves a set of fileData from a remote peer
-	dropPeer func(string)                       // Drops a peer in case of announcement violation
+	hasFd    func(common.Hash) bool            // Retrieves a fd from the local fdpool
+	addFds   func([]*types.FileData) []error   // Insert a batch of fileData into local fdpool
+	fetchFds func(string, []common.Hash) error // Retrieves a set of fileData from a remote peer
+	dropPeer func(string)                      // Drops a peer in case of announcement violation
 
 	step  chan struct{} // Notification channel when the fetcher loop iterates
 	clock mclock.Clock  // Time wrapper to simulate in tests
 	rand  *mrand.Rand   // Randomizer to use in tests instead of map range loops (soft-random)
 }
-
 
 // NewFdFetcher creates a transaction fetcher to retrieve transaction
 // based on hash announcements.
@@ -165,24 +158,24 @@ func NewFdFetcherForTests(
 	hasFd func(common.Hash) bool, addFds func([]*types.FileData) []error, fetchFds func(string, []common.Hash) error, dropPeer func(string),
 	clock mclock.Clock, rand *mrand.Rand) *FileDataFetcher {
 	return &FileDataFetcher{
-		notify:      make(chan *fdAnnounce),
-		cleanup:     make(chan *fdDelivery),
-		drop:        make(chan *fdDrop),
-		quit:        make(chan struct{}),
-		waitlist:    make(map[common.Hash]map[string]struct{}),
-		waittime:    make(map[common.Hash]mclock.AbsTime),
-		waitslots:   make(map[string]map[common.Hash]*fdMetadata),
-		announces:   make(map[string]map[common.Hash]*fdMetadata),
-		announced:   make(map[common.Hash]map[string]struct{}),
-		fetching:    make(map[common.Hash]string),
-		requests:    make(map[string]*fdRequest),
-		alternates:  make(map[common.Hash]map[string]struct{}),
-		hasFd:       hasFd,
-		addFds:      addFds,
-		fetchFds:    fetchFds,
-		dropPeer:    dropPeer,
-		clock:       clock,
-		rand:        rand,
+		notify:     make(chan *fdAnnounce),
+		cleanup:    make(chan *fdDelivery),
+		drop:       make(chan *fdDrop),
+		quit:       make(chan struct{}),
+		waitlist:   make(map[common.Hash]map[string]struct{}),
+		waittime:   make(map[common.Hash]mclock.AbsTime),
+		waitslots:  make(map[string]map[common.Hash]*fdMetadata),
+		announces:  make(map[string]map[common.Hash]*fdMetadata),
+		announced:  make(map[common.Hash]map[string]struct{}),
+		fetching:   make(map[common.Hash]string),
+		requests:   make(map[string]*fdRequest),
+		alternates: make(map[common.Hash]map[string]struct{}),
+		hasFd:      hasFd,
+		addFds:     addFds,
+		fetchFds:   fetchFds,
+		dropPeer:   dropPeer,
+		clock:      clock,
+		rand:       rand,
 	}
 }
 
@@ -201,13 +194,13 @@ func (f *FileDataFetcher) Notify(peer string, types []byte, sizes []uint32, hash
 		unknownHashes = make([]common.Hash, 0, len(hashes))
 		unknownMetas  = make([]*fdMetadata, 0, len(hashes))
 
-		duplicate   int64
+		duplicate int64
 	)
 	for i, hash := range hashes {
 		switch {
 		case f.hasFd(hash):
 			duplicate++
-		
+
 		default:
 			unknownHashes = append(unknownHashes, hash)
 			unknownMetas = append(unknownMetas, &fdMetadata{size: sizes[i]})
@@ -226,7 +219,6 @@ func (f *FileDataFetcher) Notify(peer string, types []byte, sizes []uint32, hash
 		return errTerminated
 	}
 }
-
 
 // Enqueue imports a batch of received FileData into the FileData pool
 // and the fetcher. This method may be called by both FileData broadcasts and
@@ -268,7 +260,7 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 			// Track a few interesting failure types
 			switch {
 			case err == nil: // Noop, but need to handle to not count these
-				
+
 			case errors.Is(err, filedatapool.ErrAlreadyKnown):
 				duplicate++
 
@@ -288,12 +280,12 @@ func (f *FileDataFetcher) Enqueue(peer string, fds []*types.FileData, direct boo
 			log.Warn("Peer delivering stale transactions", "peer", peer, "rejected", otherreject)
 		}
 	}
-	
+
 	select {
-		case f.cleanup <- &fdDelivery{origin: peer, hashes: added, metas: metas , direct: direct}:
-			return nil
-		case <-f.quit:
-			return errTerminated
+	case f.cleanup <- &fdDelivery{origin: peer, hashes: added, metas: metas, direct: direct}:
+		return nil
+	case <-f.quit:
+		return errTerminated
 	}
 }
 
@@ -512,7 +504,7 @@ func (f *FileDataFetcher) loop() {
 				if _, ok := f.waitlist[hash]; ok {
 					for peer, fdset := range f.waitslots {
 						if meta := fdset[hash]; meta != nil {
-							 if delivery.metas[i].size != meta.size {
+							if delivery.metas[i].size != meta.size {
 								if math.Abs(float64(delivery.metas[i].size)-float64(meta.size)) > 8 {
 									log.Warn("Announced fileData size mismatch", "peer", peer, "tx", hash, "size", delivery.metas[i].size, "ann", meta.size)
 									// Normally we should drop a peer considering this is a protocol violation.
@@ -534,7 +526,7 @@ func (f *FileDataFetcher) loop() {
 				} else {
 					for peer, fdset := range f.announces {
 						if meta := fdset[hash]; meta != nil {
-							 if delivery.metas[i].size != meta.size {
+							if delivery.metas[i].size != meta.size {
 								if math.Abs(float64(delivery.metas[i].size)-float64(meta.size)) > 8 {
 									log.Warn("Announced fileData size mismatch", "peer", peer, "tx", hash, "size", delivery.metas[i].size, "ann", meta.size)
 
@@ -650,7 +642,7 @@ func (f *FileDataFetcher) loop() {
 				}
 				delete(f.requests, drop.peer)
 			}
-			
+
 			// If a request was cancelled, check if anything needs to be rescheduled
 			if request != nil {
 				f.scheduleFetches(timeoutTimer, timeoutTrigger, nil)
@@ -763,7 +755,7 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 		}
 		var (
 			hashes = make([]common.Hash, 0, maxFdRetrievals)
-		    bytes  uint64
+			bytes  uint64
 		)
 		f.forEachAnnounce(f.announces[peer], func(hash common.Hash, meta *fdMetadata) bool {
 			// If the fileData is already fetching, skip to the next one
@@ -801,7 +793,7 @@ func (f *FileDataFetcher) scheduleFetches(timer *mclock.Timer, timeout chan stru
 			go func(peer string, hashes []common.Hash) {
 				// Try to fetch the fileData, but in case of a request
 				// failure (e.g. peer disconnected), reschedule the hashes.
-				log.Info("fetchFds-----","peer",peer,"hash",hashes[0].String())
+				log.Info("fetchFds-----", "peer", peer, "hash", hashes[0].String())
 				if err := f.fetchFds(peer, hashes); err != nil {
 					fdRequestFailMeter.Mark(int64(len(hashes)))
 					f.Drop(peer)

@@ -6,10 +6,10 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/rlp"
 )
 
 // errNoActiveJournal is returned if a fileData is attempted to be inserted
@@ -22,7 +22,7 @@ func (*devNull) Write(p []byte) (n int, err error) { return len(p), nil }
 func (*devNull) Close() error                      { return nil }
 
 type journal struct {
-	path   string         // Filesystem path to store the fileDatas at
+	path string // Filesystem path to store the fileDatas at
 
 	writer io.WriteCloser // Output stream to write new fileDatas into
 }

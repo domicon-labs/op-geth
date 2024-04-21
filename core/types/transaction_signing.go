@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/crypto"
+	"github.com/domicon-labs/op-geth/params"
 )
 
 var ErrInvalidChainId = errors.New("invalid chain id for signer")
@@ -203,7 +203,6 @@ func (s cancunSigner) Sender(tx *Transaction) (common.Address, error) {
 	}
 	return recoverPlain(s.Hash(tx), R, S, V, true)
 }
-
 
 func (s cancunSigner) Equal(s2 Signer) bool {
 	x, ok := s2.(cancunSigner)

@@ -22,11 +22,11 @@ import (
 	"sync"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/p2p"
+	"github.com/domicon-labs/op-geth/rlp"
 )
 
 const (
@@ -366,8 +366,8 @@ func (p *Peer) ReplyPooledFileDatasRLP(id uint64, hashes []common.Hash, fds []rl
 	p.knownFds.Add(hashes...)
 	// Not packed into PooledFileDataResponse to avoid RLP decoding
 	return p2p.Send(p.rw, PooledFileDatasMsg, &PooledFileDataRLPPacket{
-		RequestId:                 id,
-		PooledFileDataRLPResponse: fds,
+		RequestId:                    id,
+		PooledFileDataRLPResponse:    fds,
 		PooledFileDataStatusResponse: status,
 	})
 }
@@ -447,21 +447,20 @@ func (p *Peer) ReplyReceiptsRLP(id uint64, receipts []rlp.RawValue) error {
 }
 
 func (p *Peer) ReplyFileDatasMarshal(id uint64, fileDatas []*BantchFileData) []error {
-	errs := make([]error, 0)	
-	for _,bfd := range fileDatas {
-			data,err := rlp.EncodeToBytes(bfd)
-			if err != nil {
-					log.Error("ReplyFileDatasMarshal---encode","err",err.Error())
-			}
-			err = p2p.Send(p.rw, ResFileDatasMsg, &FileDatasResponseRLPPacket{
-				RequestId:           id,
-				FileDatasResponse:   data,
-			}) 
-			errs = append(errs, err)
+	errs := make([]error, 0)
+	for _, bfd := range fileDatas {
+		data, err := rlp.EncodeToBytes(bfd)
+		if err != nil {
+			log.Error("ReplyFileDatasMarshal---encode", "err", err.Error())
+		}
+		err = p2p.Send(p.rw, ResFileDatasMsg, &FileDatasResponseRLPPacket{
+			RequestId:         id,
+			FileDatasResponse: data,
+		})
+		errs = append(errs, err)
 	}
 	return errs
 }
-
 
 // RequestOneHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
@@ -612,7 +611,7 @@ func (p *Peer) RequestFileDatas(hashes []common.Hash) error {
 }
 
 // StartRequestFileDatas implements downloader.Peer.
-func (p *Peer) StartRequestFileDatas(hashes []common.Hash,sink chan *Response) (*Request, error) {
+func (p *Peer) StartRequestFileDatas(hashes []common.Hash, sink chan *Response) (*Request, error) {
 	p.Log().Debug("Fetching batch of fileData", "count", len(hashes))
 	id := rand.Uint64()
 
@@ -622,7 +621,7 @@ func (p *Peer) StartRequestFileDatas(hashes []common.Hash,sink chan *Response) (
 		code: ReqFileDatasMsg,
 		want: ResFileDatasMsg,
 		data: &GetFileDatasPacket{
-			RequestId:          id,
+			RequestId:           id,
 			GetFileDatasRequest: hashes,
 		},
 	}

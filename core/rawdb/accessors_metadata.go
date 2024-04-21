@@ -20,11 +20,11 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rlp"
 )
 
 // ReadDatabaseVersion retrieves the version number of the database.
@@ -191,24 +191,24 @@ func WriteTransitionStatus(db ethdb.KeyValueWriter, data []byte) {
 	}
 }
 
-func WriteCommitToHash(db ethdb.KeyValueWriter,comm []byte,txHash common.Hash) {
-	if err := db.Put(fdLookupComKey(comm),txHash.Bytes()); err != nil {
+func WriteCommitToHash(db ethdb.KeyValueWriter, comm []byte, txHash common.Hash) {
+	if err := db.Put(fdLookupComKey(comm), txHash.Bytes()); err != nil {
 		log.Error("Failed to store the fileData ")
 	}
 }
 
-func ReadCommitToHash(db ethdb.KeyValueReader,comm []byte) ([]byte,error) {
-	data,err := db.Get(fdLookupComKey(comm))
-	return data,err
+func ReadCommitToHash(db ethdb.KeyValueReader, comm []byte) ([]byte, error) {
+	data, err := db.Get(fdLookupComKey(comm))
+	return data, err
 }
 
-func WriteFileDataDetail(db ethdb.KeyValueWriter,data []byte,txHash common.Hash) {
-	if err := db.Put(fdLookupKey(txHash),data); err != nil {
+func WriteFileDataDetail(db ethdb.KeyValueWriter, data []byte, txHash common.Hash) {
+	if err := db.Put(fdLookupKey(txHash), data); err != nil {
 		log.Error("Failed to store the fileData ")
 	}
 }
 
-func ReadFileDataDetail(db ethdb.KeyValueReader,txHash common.Hash) ([]byte,error) {
-	data,err := db.Get(fdLookupKey(txHash))
-	return data,err
+func ReadFileDataDetail(db ethdb.KeyValueReader, txHash common.Hash) ([]byte, error) {
+	data, err := db.Get(fdLookupKey(txHash))
+	return data, err
 }

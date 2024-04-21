@@ -19,9 +19,9 @@ package eth
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/log"
 )
 
 const (
@@ -81,8 +81,8 @@ func (p *Peer) broadcastFileData() {
 				fds         []*types.FileData
 				//size        common.StorageSize
 			)
-			for i := 0; i < len(queue) ; i++ {
-				if fd,_,err := p.fdpool.Get(queue[i]); fd != nil && err == nil{
+			for i := 0; i < len(queue); i++ {
+				if fd, _, err := p.fdpool.Get(queue[i]); fd != nil && err == nil {
 					fds = append(fds, fd)
 				}
 				hashesCount++
@@ -92,7 +92,7 @@ func (p *Peer) broadcastFileData() {
 			if len(fds) > 0 {
 				done = make(chan struct{})
 				go func() {
-					log.Info("broadcastFileData---节点广播","peer",p.id)
+					log.Info("broadcastFileData---节点广播", "peer", p.id)
 					if err := p.SendFileDatas(fds); err != nil {
 						fail <- err
 						return
@@ -143,13 +143,13 @@ func (p *Peer) announceFileDatas() {
 		if done == nil && len(queue) > 0 {
 			// Pile fileData hashes until we reach our allowed network limit
 			var (
-				count        int
-				sending      []common.Hash
-				sizes 		 []uint32
-				size         common.StorageSize
+				count   int
+				sending []common.Hash
+				sizes   []uint32
+				size    common.StorageSize
 			)
 			for count = 0; count < len(queue) && size < maxTxPacketSize; count++ {
-				if fd,_,err := p.fdpool.Get(queue[count]); fd != nil && err == nil {
+				if fd, _, err := p.fdpool.Get(queue[count]); fd != nil && err == nil {
 					sending = append(sending, queue[count])
 					sizes = append(sizes, uint32(fd.Size()))
 					size += common.HashLength

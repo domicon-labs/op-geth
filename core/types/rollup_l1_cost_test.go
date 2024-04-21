@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/domicon-labs/op-geth/params"
 	"github.com/stretchr/testify/require"
 )
 

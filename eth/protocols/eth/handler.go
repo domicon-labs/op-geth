@@ -21,17 +21,17 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/types"
 
-	"github.com/ethereum/go-ethereum/log"
-	pool "github.com/ethereum/go-ethereum/core/txpool/filedatapool"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/ethereum/go-ethereum/params"
+	pool "github.com/domicon-labs/op-geth/core/txpool/filedatapool"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/metrics"
+	"github.com/domicon-labs/op-geth/p2p"
+	"github.com/domicon-labs/op-geth/p2p/enode"
+	"github.com/domicon-labs/op-geth/p2p/enr"
+	"github.com/domicon-labs/op-geth/params"
 )
 
 const (
@@ -51,7 +51,7 @@ const (
 	// number is mostly there to limit the number of disk lookups. With block
 	// containing 200+ transactions nowadays, the practical limit will always
 	// be softResponseLimit.
-	
+
 	maxReceiptsServe = 1024
 
 	// maxFileDatasServe is the maximum number of block fileDatas to serve. This
@@ -106,9 +106,8 @@ type TxPool interface {
 // FileDataPool defines the methods needed by the protocol handler to serve fileData.
 type FileDataPool interface {
 	// Get retrieves the fileData from the local fileDatapool with the given hash.
-	Get(hash common.Hash) (*types.FileData,pool.DISK_FILEDATA_STATE ,error)
+	Get(hash common.Hash) (*types.FileData, pool.DISK_FILEDATA_STATE, error)
 }
-
 
 // MakeProtocols constructs the P2P protocol definitions for `eth`.
 func MakeProtocols(backend Backend, network uint64, dnsdisc enode.Iterator) []p2p.Protocol {
@@ -175,7 +174,7 @@ func nodeInfo(chain *core.BlockChain, network uint64) *NodeInfo {
 func Handle(backend Backend, peer *Peer) error {
 	for {
 		if err := handleMessage(backend, peer); err != nil {
-			log.Info("Handle----handleMessage--","err",err.Error())
+			log.Info("Handle----handleMessage--", "err", err.Error())
 			peer.Log().Debug("Message handling failed in `eth`", "err", err)
 			return err
 		}
@@ -200,13 +199,13 @@ var eth67 = map[uint64]msgHandler{
 	GetReceiptsMsg:                handleGetReceipts,
 	ReceiptsMsg:                   handleReceipts,
 	GetPooledTransactionsMsg:      handleGetPooledTransactions,
-	FileDataMsg:				   				 handleFileDatas,
-	ResFileDatasMsg:							 handleResFileDatas,
- 	ReqFileDatasMsg:							 handleReqFileDatas,	
+	FileDataMsg:                   handleFileDatas,
+	ResFileDatasMsg:               handleResFileDatas,
+	ReqFileDatasMsg:               handleReqFileDatas,
 	PooledTransactionsMsg:         handlePooledTransactions,
 	GetPooledFileDatasMsg:         handleGetPooledFileDatas,
 	NewPooledFileDataHashesMsg:    handleNewPooledFileDataHashes67,
-	PooledFileDatasMsg:			  		 handlePooledFileDatas,
+	PooledFileDatasMsg:            handlePooledFileDatas,
 }
 
 var eth68 = map[uint64]msgHandler{
@@ -222,12 +221,12 @@ var eth68 = map[uint64]msgHandler{
 	ReceiptsMsg:                   handleReceipts,
 	GetPooledTransactionsMsg:      handleGetPooledTransactions,
 	PooledTransactionsMsg:         handlePooledTransactions,
-	FileDataMsg:				  				 handleFileDatas,
-	ReqFileDatasMsg:							 handleReqFileDatas,
- 	ResFileDatasMsg:							 handleResFileDatas,	
+	FileDataMsg:                   handleFileDatas,
+	ReqFileDatasMsg:               handleReqFileDatas,
+	ResFileDatasMsg:               handleResFileDatas,
 	GetPooledFileDatasMsg:         handleGetPooledFileDatas,
 	NewPooledFileDataHashesMsg:    handleNewPooledFileDataHashes68,
-	PooledFileDatasMsg:			 		   handlePooledFileDatas,
+	PooledFileDatasMsg:            handlePooledFileDatas,
 }
 
 // handleMessage is invoked whenever an inbound message is received from a remote

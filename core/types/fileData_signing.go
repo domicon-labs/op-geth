@@ -10,9 +10,9 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/crypto"
+	"github.com/domicon-labs/op-geth/params"
 )
 
 //var ErrInvalidChainId = errors.New("invalid chain id for signer")
@@ -69,7 +69,6 @@ func LatestFdSigner(config *params.ChainConfig) FdSigner {
 	return HomesteadFdSigner{}
 }
 
-
 // LatestFdSignerForChainID returns the 'most permissive' Signer available. Specifically,
 // this enables support for EIP-155 replay protection and all implemented EIP-2718
 // fileData types if chainID is non-nil.
@@ -91,15 +90,14 @@ func SignFd(fd *FileData, s FdSigner, prv *ecdsa.PrivateKey) (*FileData, error) 
 	if err != nil {
 		return nil, err
 	}
-	return fd.WithSignature(s,sig)
+	return fd.WithSignature(s, sig)
 }
 
 // FdSender returns the address derived from the signature (V, R, S) using secp256k1
 // elliptic curve and an error if it failed deriving or upon an incorrect
 // signature.
-//
 func FdSender(signer FdSigner, fd *FileData) (common.Address, error) {
-	addr,err := signer.Sender(fd)
+	addr, err := signer.Sender(fd)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -119,13 +117,13 @@ type FdSigner interface {
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
 	SignatureValues(fd *FileData, sig []byte) (r, s, v *big.Int, err error)
-	
+
 	ChainID() *big.Int
 
 	// Hash returns 'signature hash', i.e. the fileData hash that is signed by the
 	// private key. This hash does not uniquely identify the fileData.
 	Hash(fd *FileData) common.Hash
-	
+
 	// Equal returns true if the given signer is the same as the receiver.
 	Equal(FdSigner) bool
 }
@@ -176,8 +174,8 @@ func (s EIP155FdSigner) SignatureValues(fd *FileData, sig []byte) (R, S, V *big.
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s EIP155FdSigner) Hash(fd *FileData) common.Hash {
-	data := make([]byte,0)
-	data = append(data, uint64ToBigEndianHexBytes(s.chainId.Uint64())...)	
+	data := make([]byte, 0)
+	data = append(data, uint64ToBigEndianHexBytes(s.chainId.Uint64())...)
 	data = append(data, fd.Sender.Bytes()...)
 	data = append(data, fd.Submitter.Bytes()...)
 	data = append(data, uint64ToBigEndianHexBytes(fd.GasPrice)...)
@@ -207,11 +205,10 @@ func (hs HomesteadFdSigner) SignatureValues(fd *FileData, sig []byte) (r, s, v *
 }
 
 func (hs HomesteadFdSigner) Sender(fd *FileData) (common.Address, error) {
-	r, s ,v := fd.RawSignatureValues()
-	v.Sub(v,new(big.Int).SetUint64(27))
+	r, s, v := fd.RawSignatureValues()
+	v.Sub(v, new(big.Int).SetUint64(27))
 	return recoverPlain(hs.Hash(fd), r, s, v, true)
 }
-
 
 // FrontierFdSigner implements Signer interface using the
 // frontier rules.
@@ -228,7 +225,7 @@ func (s FrontierFdSigner) Equal(s2 FdSigner) bool {
 
 func (fs FrontierFdSigner) Sender(fd *FileData) (common.Address, error) {
 	r, s, v := sliteSignature(fd.SignData)
-	v = v.Mul(v,new(big.Int).SetUint64(27))
+	v = v.Mul(v, new(big.Int).SetUint64(27))
 	return recoverPlain(fs.Hash(fd), r, s, v, false)
 }
 
@@ -242,7 +239,7 @@ func (fs FrontierFdSigner) SignatureValues(fd *FileData, sig []byte) (r, s, v *b
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierFdSigner) Hash(fd *FileData) common.Hash {
-	data := make([]byte,0)	
+	data := make([]byte, 0)
 	data = append(data, fd.Sender.Bytes()...)
 	data = append(data, fd.Submitter.Bytes()...)
 	data = append(data, uint64ToBigEndianHexBytes(fd.GasPrice)...)
@@ -252,14 +249,14 @@ func (fs FrontierFdSigner) Hash(fd *FileData) common.Hash {
 	return crypto.Keccak256Hash(data)
 }
 
-func sliteSignature(sig []byte) (r,s,v *big.Int) {
+func sliteSignature(sig []byte) (r, s, v *big.Int) {
 	r = new(big.Int).SetBytes(sig[:32])
 	s = new(big.Int).SetBytes(sig[32:64])
 	v = new(big.Int).SetBytes(sig[64:])
-	return r,s,v
- }
+	return r, s, v
+}
 
- func uint64ToBigEndianHexBytes(value uint64) []byte {
+func uint64ToBigEndianHexBytes(value uint64) []byte {
 	// 创建一个长度为 8 的字节切片
 	byteData := make([]byte, 8)
 	// 使用 binary.BigEndian.PutUint64 将 uint64 转换为大端字节序

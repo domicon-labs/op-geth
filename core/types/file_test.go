@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/crypto"
+	"github.com/domicon-labs/op-geth/rlp"
 )
 
 const (
@@ -49,6 +49,6 @@ func TestNewFileData(t *testing.T) {
 
 	fmt.Println("Decoded FileData:", fd)
 	println("解压信息----txHash:", fd.TxHash.String())
-	println("信息---data:",string(fd.Data))
+	println("信息---data:", string(fd.Data))
 
 }

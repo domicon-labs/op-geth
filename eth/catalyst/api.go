@@ -24,17 +24,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/domicon-labs/op-geth/beacon/engine"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/hexutil"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/eth"
+	"github.com/domicon-labs/op-geth/eth/downloader"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/miner"
+	"github.com/domicon-labs/op-geth/node"
+	"github.com/domicon-labs/op-geth/rpc"
 )
 
 // Register adds the engine API to the full node.
@@ -88,13 +88,13 @@ var caps = []string{
 	"engine_newPayloadV3",
 	"engine_getPayloadBodiesByHashV1",
 	"engine_getPayloadBodiesByRangeV1",
-	
+
 	"engine_uploadDataFile",
 	"engine_getDataFile",
 }
 
 type ConsensusAPI struct {
-	eth *eth.Ethereum
+	eth          *eth.Ethereum
 	remoteBlocks *headerQueue  // Cache of remote payloads received
 	localBlocks  *payloadQueue // Cache of local payloads generated
 
@@ -149,7 +149,7 @@ func newConsensusAPIWithoutHeartbeat(eth *eth.Ethereum) *ConsensusAPI {
 		log.Warn("Engine API started but chain not configured for merge yet")
 	}
 	api := &ConsensusAPI{
-		eth:               eth,	
+		eth:               eth,
 		remoteBlocks:      newHeaderQueue(),
 		localBlocks:       newPayloadQueue(),
 		invalidBlocksHits: make(map[common.Hash]int),
@@ -435,45 +435,44 @@ func (api *ConsensusAPI) ExchangeTransitionConfigurationV1(config engine.Transit
 	return &engine.TransitionConfigurationV1{TerminalTotalDifficulty: (*hexutil.Big)(ttd)}, nil
 }
 
-//upload fileData
-func (api *ConsensusAPI) UploadFileData(sender common.Address,submitter common.Address,index uint64,length uint64,data []byte,commit []byte,sign []byte,txHash common.Hash) (flag bool,err error) { 
-	
+// upload fileData
+func (api *ConsensusAPI) UploadFileData(sender common.Address, submitter common.Address, index uint64, length uint64, data []byte, commit []byte, sign []byte, txHash common.Hash) (flag bool, err error) {
+
 	fd := &types.FileData{
-		Sender: sender,
-		Submitter: submitter,
-		Index: index,
-		Length: length,
-		Data: data,
+		Sender:     sender,
+		Submitter:  submitter,
+		Index:      index,
+		Length:     length,
+		Data:       data,
 		Commitment: commit,
-		SignData: sign,
-		TxHash: txHash,
+		SignData:   sign,
+		TxHash:     txHash,
 	}
 
 	fds := []*types.FileData{fd}
-	errs := api.eth.FilePool().Add(fds,true,false)
+	errs := api.eth.FilePool().Add(fds, true, false)
 	if errs[0] != nil {
-		return false,errs[0]
+		return false, errs[0]
 	}
-	return true,nil 
+	return true, nil
 }
 
 // getFileData by txHash
-func (api *ConsensusAPI) GetFileDataWithTxHash(txHash common.Hash) (*types.FileData,error){
-	data,_,err := api.eth.FilePool().Get(txHash)
+func (api *ConsensusAPI) GetFileDataWithTxHash(txHash common.Hash) (*types.FileData, error) {
+	data, _, err := api.eth.FilePool().Get(txHash)
 	if data == nil || err != nil {
-		return nil,err
+		return nil, err
 	}
-	return data,nil
+	return data, nil
 }
 
-func (api *ConsensusAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool,error) {
+func (api *ConsensusAPI) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	err := api.eth.FilePool().SaveFileDataToDisk(hash)
 	if err != nil {
-		return false,err
+		return false, err
 	}
-	return true,nil
+	return true, nil
 }
-
 
 // GetPayloadV1 returns a cached payload by id.
 func (api *ConsensusAPI) GetPayloadV1(payloadID engine.PayloadID) (*engine.ExecutableData, error) {

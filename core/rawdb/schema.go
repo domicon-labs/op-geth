@@ -21,9 +21,9 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/crypto"
+	"github.com/domicon-labs/op-geth/metrics"
 )
 
 // The fields below define the low level database schema prefixing.
@@ -100,18 +100,18 @@ var (
 	headerHashSuffix   = []byte("n") // headerPrefix + num (uint64 big endian) + headerHashSuffix -> hash
 	headerNumberPrefix = []byte("H") // headerNumberPrefix + hash -> num (uint64 big endian)
 
-	blockBodyPrefix     = []byte("b") // blockBodyPrefix + num (uint64 big endian) + hash -> block body
-	blockReceiptsPrefix = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
-	blockFileDatasPrefix= []byte("F") // blockFileDatasPrefix + num (uint64 big endian) + hash -> block fileDatas
+	blockBodyPrefix      = []byte("b") // blockBodyPrefix + num (uint64 big endian) + hash -> block body
+	blockReceiptsPrefix  = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
+	blockFileDatasPrefix = []byte("F") // blockFileDatasPrefix + num (uint64 big endian) + hash -> block fileDatas
 
-	txLookupPrefix        = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
-	fdLookupPrefix        = []byte("f") // fdLookupPrefix + hash -> fileData DiskSaved lookup metadata
-	fdLookupComPrefix		  = []byte("fc") // fdLookupComPrefix + Commitment -> hash to find file Data
-	bloomBitsPrefix       = []byte("B") // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
-	SnapshotAccountPrefix = []byte("a") // SnapshotAccountPrefix + account hash -> account trie value
-	SnapshotStoragePrefix = []byte("o") // SnapshotStoragePrefix + account hash + storage hash -> storage trie value
-	CodePrefix            = []byte("c") // CodePrefix + code hash -> account code
-	skeletonHeaderPrefix  = []byte("S") // skeletonHeaderPrefix + num (uint64 big endian) -> header
+	txLookupPrefix        = []byte("l")  // txLookupPrefix + hash -> transaction/receipt lookup metadata
+	fdLookupPrefix        = []byte("f")  // fdLookupPrefix + hash -> fileData DiskSaved lookup metadata
+	fdLookupComPrefix     = []byte("fc") // fdLookupComPrefix + Commitment -> hash to find file Data
+	bloomBitsPrefix       = []byte("B")  // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
+	SnapshotAccountPrefix = []byte("a")  // SnapshotAccountPrefix + account hash -> account trie value
+	SnapshotStoragePrefix = []byte("o")  // SnapshotStoragePrefix + account hash + storage hash -> storage trie value
+	CodePrefix            = []byte("c")  // CodePrefix + code hash -> account code
+	skeletonHeaderPrefix  = []byte("S")  // skeletonHeaderPrefix + num (uint64 big endian) -> header
 
 	// Path-based storage scheme of merkle patricia trie.
 	trieNodeAccountPrefix = []byte("A") // trieNodeAccountPrefix + hexPath -> trie node
@@ -154,13 +154,12 @@ func encodeBlockNumber(number uint64) []byte {
 	return enc
 }
 
-// encodeBlockState encodes a block state as big endian uint64 
+// encodeBlockState encodes a block state as big endian uint64
 func encodeBlockState(state uint64) []byte {
 	enc := make([]byte, 8)
 	binary.BigEndian.PutUint64(enc, state)
 	return enc
 }
-
 
 // headerKeyPrefix = headerPrefix + num (uint64 big endian)
 func headerKeyPrefix(number uint64) []byte {
@@ -189,8 +188,8 @@ func headerNumberKey(hash common.Hash) []byte {
 
 // headerStatekey = headerNumberPrefix + hash + "state"
 func headerNumberStateKey(hash common.Hash) []byte {
-	res := append(headerNumberPrefix,hash.Bytes()...)
-	return append(res,[]byte("state")...)
+	res := append(headerNumberPrefix, hash.Bytes()...)
+	return append(res, []byte("state")...)
 }
 
 // blockBodyKey = blockBodyPrefix + num (uint64 big endian) + hash
@@ -215,13 +214,13 @@ func txLookupKey(hash common.Hash) []byte {
 
 // fdLookupKey = fdLookupPrefix + hash
 func fdLookupKey(hash common.Hash) []byte {
-	return append(fdLookupPrefix,hash.Bytes()...)
+	return append(fdLookupPrefix, hash.Bytes()...)
 }
 
 // fdLookupComKey = fdLookupComPrefix + commient
 func fdLookupComKey(comm []byte) []byte {
-	return append(fdLookupComPrefix,comm...)
-} 
+	return append(fdLookupComPrefix, comm...)
+}
 
 // accountSnapshotKey = SnapshotAccountPrefix + hash
 func accountSnapshotKey(hash common.Hash) []byte {

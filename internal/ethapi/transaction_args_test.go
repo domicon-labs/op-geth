@@ -24,21 +24,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/bloombits"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/txpool/filedatapool"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/domicon-labs/op-geth"
+	"github.com/domicon-labs/op-geth/accounts"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/common/hexutil"
+	"github.com/domicon-labs/op-geth/consensus"
+	"github.com/domicon-labs/op-geth/core"
+	"github.com/domicon-labs/op-geth/core/bloombits"
+	"github.com/domicon-labs/op-geth/core/state"
+	"github.com/domicon-labs/op-geth/core/txpool/filedatapool"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/core/vm"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/event"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rpc"
 )
 
 // TestSetFeeDefaults tests the logic for filling in default fee values works as expected.
@@ -223,7 +223,7 @@ func (*backendMock) DiskSaveFileDataWithHash(hash common.Hash) (bool, error) {
 	panic("unimplemented")
 }
 
-func (*backendMock)  DiskSaveFileDatas(hashed []common.Hash,blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+func (*backendMock) DiskSaveFileDatas(hashed []common.Hash, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
 	return true, nil
 }
 
@@ -238,20 +238,20 @@ func (*backendMock) UploadFileData(data []byte) error {
 }
 
 // UploadFileDataByParams implements Backend.
-func (*backendMock) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, gasPrice uint64,commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
+func (*backendMock) UploadFileDataByParams(sender common.Address, submitter common.Address, index uint64, length uint64, gasPrice uint64, commitment []byte, data []byte, signData []byte, txHash common.Hash) error {
 	return nil
 }
 
-func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData,filedatapool.DISK_FILEDATA_STATE ,error) {
-	return nil, 0,nil
+func (*backendMock) GetFileDataByHash(hash common.Hash) (*types.FileData, filedatapool.DISK_FILEDATA_STATE, error) {
+	return nil, 0, nil
 }
 
 func (*backendMock) GetFileDataByCommitment(comimt []byte) (*types.FileData, error) {
 	return nil, nil
 }
 
-func (* backendMock) CheckSelfState(blockNr rpc.BlockNumber) (string,error) {
-	return "true",nil
+func (*backendMock) CheckSelfState(blockNr rpc.BlockNumber) (string, error) {
+	return "true", nil
 }
 
 func (*backendMock) BatchFileDataByHashes(hashes rpc.TxHashes) ([]bool, []error) {

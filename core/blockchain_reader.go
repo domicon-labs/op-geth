@@ -19,18 +19,18 @@ package core
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/state/snapshot"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/consensus"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/state"
+	"github.com/domicon-labs/op-geth/core/state/snapshot"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/core/vm"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/event"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/rlp"
+	"github.com/domicon-labs/op-geth/trie"
 )
 
 // CurrentHeader retrieves the current head header of the canonical chain. The
@@ -240,10 +240,9 @@ func (bc *BlockChain) GetFileDatasByHash(hash common.Hash) []*types.FileData {
 	if header == nil {
 		return nil
 	}
-	fds := rawdb.ReadFileDatas(bc.db,hash,*number)
+	fds := rawdb.ReadFileDatas(bc.db, hash, *number)
 	return fds
 }
-
 
 // GetUnclesInChain retrieves all the uncles from a given block backwards until
 // a specific distance is reached.
@@ -411,7 +410,7 @@ func (bc *BlockChain) TrieDB() *trie.Database {
 	return bc.triedb
 }
 
-// Db returns the disk database 
+// Db returns the disk database
 func (bc *BlockChain) Db() ethdb.Database {
 	return bc.db
 }

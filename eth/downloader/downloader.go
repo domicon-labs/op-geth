@@ -25,24 +25,24 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state/snapshot"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/protocols/snap"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/domicon-labs/op-geth"
+	"github.com/domicon-labs/op-geth/common"
+	"github.com/domicon-labs/op-geth/core/rawdb"
+	"github.com/domicon-labs/op-geth/core/state/snapshot"
+	"github.com/domicon-labs/op-geth/core/types"
+	"github.com/domicon-labs/op-geth/eth/protocols/snap"
+	"github.com/domicon-labs/op-geth/ethdb"
+	"github.com/domicon-labs/op-geth/event"
+	"github.com/domicon-labs/op-geth/log"
+	"github.com/domicon-labs/op-geth/params"
+	"github.com/domicon-labs/op-geth/trie"
 )
 
 var (
-	MaxBlockFetch   = 128 // Amount of blocks to be fetched per retrieval request
-	MaxHeaderFetch  = 192 // Amount of block headers to be fetched per retrieval request
-	MaxSkeletonSize = 128 // Number of header fetches to need for a skeleton assembly
-	MaxReceiptFetch = 256 // Amount of transaction receipts to allow fetching per request
+	MaxBlockFetch    = 128 // Amount of blocks to be fetched per retrieval request
+	MaxHeaderFetch   = 192 // Amount of block headers to be fetched per retrieval request
+	MaxSkeletonSize  = 128 // Number of header fetches to need for a skeleton assembly
+	MaxReceiptFetch  = 256 // Amount of transaction receipts to allow fetching per request
 	MaxFileDataFetch = 128 //Amount of blocks to be fetched per retrieval request
 
 	maxQueuedHeaders            = 32 * 1024                         // [eth/62] Maximum number of headers to queue for import (DOS protection)
@@ -150,10 +150,10 @@ type Downloader struct {
 	quitLock sync.Mutex    // Lock to prevent double closes
 
 	// Testing hooks
-	syncInitHook     func(uint64, uint64)  // Method to call upon initiating a new sync run
-	bodyFetchHook    func([]*types.Header) // Method to call upon starting a block body fetch
-	receiptFetchHook func([]*types.Header) // Method to call upon starting a receipt fetch
-	chainInsertHook  func([]*fetchResult)  // Method to call upon inserting a chain of blocks (possibly in multiple invocations)
+	syncInitHook      func(uint64, uint64)  // Method to call upon initiating a new sync run
+	bodyFetchHook     func([]*types.Header) // Method to call upon starting a block body fetch
+	receiptFetchHook  func([]*types.Header) // Method to call upon starting a receipt fetch
+	chainInsertHook   func([]*fetchResult)  // Method to call upon inserting a chain of blocks (possibly in multiple invocations)
 	fileDataFetchHook func([]*types.Header) // Method to call upon starting a fileData fetch
 
 	// Progress reporting metrics
@@ -632,9 +632,9 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td, ttd *
 	}
 	fetchers := []func() error{
 		headerFetcher, // Headers are always retrieved
-		func() error { return d.fetchBodies(origin+1, beaconMode) },   // Bodies are retrieved during normal and snap sync
-		func() error { return d.fetchReceipts(origin+1, beaconMode) }, // Receipts are retrieved during snap sync
-		func() error { return d.fetchFileDatas(origin+1, beaconMode) }, // FileDatas are retrieved during normal 
+		func() error { return d.fetchBodies(origin+1, beaconMode) },    // Bodies are retrieved during normal and snap sync
+		func() error { return d.fetchReceipts(origin+1, beaconMode) },  // Receipts are retrieved during snap sync
+		func() error { return d.fetchFileDatas(origin+1, beaconMode) }, // FileDatas are retrieved during normal
 		func() error { return d.processHeaders(origin+1, td, ttd, beaconMode) },
 	}
 	if mode == SnapSync {
@@ -1272,7 +1272,6 @@ func (d *Downloader) fetchReceipts(from uint64, beaconMode bool) error {
 	log.Debug("Receipt download terminated", "err", err)
 	return err
 }
-
 
 // fetchFileDatas iteratively downloads the scheduled block fileDatas, taking any
 // available peers, reserving a chunk of fileDatas for each, waiting for delivery
