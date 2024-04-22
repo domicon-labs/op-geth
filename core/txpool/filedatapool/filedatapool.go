@@ -315,6 +315,7 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	detail := DiskDetail{TxHash: hash,State: DISK_FILEDATA_STATE_SAVE,TimeRecord: time.Now(),Data: *fileData}
 	data,_ := json.Marshal(detail)
 	rawdb.WriteFileDataDetail(diskDb,data,hash)
+	rawdb.WriteCommitToHash(diskDb,fileData.Commitment,hash)
 	fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 	log.Info("SaveFileDataToDisk----","txHash",hash.String())
 	fp.removeFileData(hash)
@@ -354,6 +355,7 @@ func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common
 			}
 			rawdb.WriteFileDataDetail(db,data,hash)
 			rawdb.WriteCommitToHash(db,fd.Commitment,fd.TxHash)
+			log.Info("SaveBatchFileDatasToDisk----","txHash",fd.TxHash.String())
 		}
 		fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 		fp.removeFileData(hash)
@@ -385,7 +387,6 @@ func (fp *FilePool) GetByCommitment(comimt []byte) (*types.FileData,DISK_FILEDAT
 		log.Info("GetByCommitment---err","comimt",&comimt)
 		return nil,DISK_FILEDATA_STATE_UNKNOW,errors.New("dont have that commit")
 	}
-
 	hash := common.BytesToHash(hashData)
 	return fp.Get(hash)
 }  
