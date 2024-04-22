@@ -82,12 +82,12 @@ const (
 	DataState_UNKNOW 
 )
 type Result struct{
-	Flags  					[]bool    `json:"flags"`
+	Flags  					[]DataState    `json:"flags"`
 }
 
 func NewResult(length uint64) *Result{
 	return &Result{
-		Flags: make([]bool, length),
+		Flags: make([]DataState, length),
 	}
 }
 

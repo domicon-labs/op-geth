@@ -392,6 +392,7 @@ func (b *EthAPIBackend) BatchSaveFileDataWithHashes(hashes rpc.TxHashes) ([]bool
 	flags := make([]bool, len(hashes.TxHashes))
 	errs := make([]error, len(hashes.TxHashes))
 	for index, hash := range hashes.TxHashes {
+		log.Info("BatchSaveFileDataWithHashes-----","hash",hash.String())
 		err := b.eth.fdPool.SaveFileDataToDisk(hash)
 		if err != nil {
 			flags[index] = false 

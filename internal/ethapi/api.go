@@ -1907,11 +1907,11 @@ func (f *FileDataAPI) BatchFileDataByHashes(hashes rpc.TxHashes) *rpc.Result {
 		_, state, _ := f.b.GetFileDataByHash(hash)
 		switch state {
 		case filedatapool.DISK_FILEDATA_STATE_DEL:
-			res.Flags[index] = false
+			res.Flags[index] = rpc.DataState_DEL
 		case filedatapool.DISK_FILEDATA_STATE_SAVE:
-			res.Flags[index] = true
+			res.Flags[index] = rpc.DataState_SAVE
 		case filedatapool.DISK_FILEDATA_STATE_UNKNOW:
-			res.Flags[index] = true
+			res.Flags[index] = rpc.DataState_UNKNOW
 		}
 	}
 	return res

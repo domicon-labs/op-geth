@@ -1,9 +1,12 @@
 package eth
 
 import (
+	"bytes"
 	//"bytes"
 	"context"
-	//"strconv"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"strconv"
 	"testing"
 	//"time"
 
@@ -23,44 +26,44 @@ const (
 
 func TestUploadFileDataByParams(t *testing.T){
 
-	// client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
-	// if err != nil {
-	// 	println("DialContext-----err",err.Error())
-	// }
+	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	if err != nil {
+		println("DialContext-----err",err.Error())
+	}
 
-	// priv, err := crypto.HexToECDSA(privateKey)
-	// if err != nil {
-	// 	println("HexToECDSA---err",err.Error())
-	// }
+	priv, err := crypto.HexToECDSA(privateKey)
+	if err != nil {
+		println("HexToECDSA---err",err.Error())
+	}
 	
-	// index := 2
-	// length := 1024
-	// gasPrice := 200
-	commit := []byte("commit")
+	index := 2
+	length := 1024
+	gasPrice := 200
+	commit := []byte("commit------1")
 
 	//dumper.Printf("commit-----%x",commit)
 	println("commit-----",&commit)
 	
-	// s := strconv.Itoa(index)
-	// data := bytes.Repeat([]byte(s), 1024)
-	// sign := []byte("sign")
-	// txHash := common.BytesToHash([]byte("2"))
+	s := strconv.Itoa(index)
+	data := bytes.Repeat([]byte(s), 1024)
+	sign := []byte("sign")
+	txHash := common.BytesToHash([]byte("2"))
 
 	// for  {
 		// time.Sleep(500 * time.Millisecond)
-		// sender := crypto.PubkeyToAddress(priv.PublicKey)
-		// submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
-		// err = client.UploadFileDataByParams(context.TODO(),sender,submitter,uint64(index),uint64(length),uint64(gasPrice),data,commit,sign,txHash)
-		// if err != nil {
-		// 	println("UploadFileDataByParams---err",err.Error())
-		//}
+		sender := crypto.PubkeyToAddress(priv.PublicKey)
+		submitter := common.HexToAddress("251b3740a02a1c5cf5ffcdf60d42ed2a8398ddc8")
+		err = client.UploadFileDataByParams(context.TODO(),sender,submitter,uint64(index),uint64(length),uint64(gasPrice),data,commit,sign,txHash)
+		if err != nil {
+			println("UploadFileDataByParams---err",err.Error())
+		}
 		//index++
 		// s := strconv.Itoa(index)
 		// bytes.Repeat([]byte(s), 1024)
 		// data = []byte(string(data))
 		// txHash = common.BytesToHash([]byte(s))
 
-	//	println("发送的交易哈希是txHash: ",txHash.String(),"data: ",s,"data length: ",len(data))
+		println("发送的交易哈希是txHash: ",txHash.String(),"data: ",s,"data length: ",len(data))
 	// }
 	
 }
@@ -68,13 +71,13 @@ func TestUploadFileDataByParams(t *testing.T){
 
 func TestGetFileDataByHash(t *testing.T){
 
-	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	client,err := ethclient.DialContext(context.TODO(),"http://13.212.115.195:" + port)
 	if err != nil {
 		println("DialContext-----err",err.Error())
 	}
 
 	
-	fileData,err := client.GetFileDataByHash(context.TODO(),common.BytesToHash([]byte("2")))
+	fileData,err := client.GetFileDataByHash(context.TODO(),common.BytesToHash([]byte("0x445dc7b5d45bc0db85a36d3d47cbbf70b00471068954bc9395be2cb414fe1285")))
 	if err != nil {
 		println("GetFileDataByHash---err",err.Error())
 	}
@@ -96,14 +99,29 @@ func TestDiskFileData(t *testing.T) {
 	log.Info("test-----","flag",flag)
 }
 
-
-func TestGetFileDataByHashes(t *testing.T){
+func TestEthAPIBackend_GetFileDataByCommitment(t *testing.T) {
 	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
 	if err != nil {
 		println("DialContext-----err",err.Error())
 	}
 
-	res,err := client.GetBatchFileDataByHashes(context.TODO(),rpc.TxHashes{TxHashes: []common.Hash{common.BytesToHash([]byte("2"))}})
+	commit := []byte("commit------1")
+	res,err := client.GetFileDataByCommitment(context.TODO(),commit)
+	if err != nil {
+		println("GetFileDataByCommitment-----err",err.Error())
+	}
+
+	log.Info("test-----","res",res)
+}
+
+
+func TestGetFileDataByHashes(t *testing.T){
+	client,err := ethclient.DialContext(context.TODO(),"http://13.212.115.195:" + port)
+	if err != nil {
+		println("DialContext-----err",err.Error())
+	}
+
+	res,err := client.GetBatchFileDataByHashes(context.TODO(),rpc.TxHashes{TxHashes: []common.Hash{common.BytesToHash([]byte("0x445dc7b5d45bc0db85a36d3d47cbbf70b00471068954bc9395be2cb414fe1285"))}})
 	if err != nil {
 		println("TestGetFileDataByHashes-----err",err.Error())
 	}
