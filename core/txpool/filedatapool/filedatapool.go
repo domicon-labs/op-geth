@@ -319,6 +319,8 @@ func (fp *FilePool) SaveFileDataToDisk(hash common.Hash) error {
 	fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 	log.Info("SaveFileDataToDisk----","txHash",hash.String())
 	fp.removeFileData(hash)
+	cmHash := common.BytesToHash(fileData.Commitment)
+	fp.removeFileData(cmHash)
 	return nil
 }
 
@@ -359,6 +361,8 @@ func (fp *FilePool) SaveBatchFileDatasToDisk(hashes []common.Hash,blcHash common
 		}
 		fp.diskCache.Hashes = append(fp.diskCache.Hashes, hash)
 		fp.removeFileData(hash)
+		cmHash := common.BytesToHash(fd.Commitment)
+		fp.removeFileData(cmHash)
 	}
 	return true,nil
 }
@@ -381,6 +385,12 @@ func (fp *FilePool) Has(hash common.Hash) bool{
 }
 
 func (fp *FilePool) GetByCommitment(comimt []byte) (*types.FileData,DISK_FILEDATA_STATE,error){
+	cmHash := common.BytesToHash(comimt)
+	fd := fp.get(cmHash)
+	if fd != nil {
+		return fd,DISK_FILEDATA_STATE_SAVE,nil
+	}
+
 	diskDb := fp.currentState.Database().DiskDB()
 	hashData,err := rawdb.ReadCommitToHash(diskDb,comimt)
 	if err != nil && len(hashData) == 0 {
@@ -690,6 +700,8 @@ func (t *lookup) Add(fd *types.FileData) {
 	slotsGauge.Update(int64(t.slots))
 	log.Info("Add-----加进来了")
 	t.collector[fd.TxHash] = fd
+	hash := common.BytesToHash(fd.Commitment)
+	t.collector[hash] = fd
 }
 
 // Slots returns the current number of slots used in the lookup.

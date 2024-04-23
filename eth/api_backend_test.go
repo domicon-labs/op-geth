@@ -77,7 +77,7 @@ func TestGetFileDataByHash(t *testing.T){
 	}
 
 	
-	fileData,err := client.GetFileDataByHash(context.TODO(),common.BytesToHash([]byte("0x445dc7b5d45bc0db85a36d3d47cbbf70b00471068954bc9395be2cb414fe1285")))
+	fileData,err := client.GetFileDataByHash(context.TODO(),common.BytesToHash([]byte("0x2714d7564144c2752f66cf9dd030b0d57007cac960fb20bffc0c8f30f1a3261d")))
 	if err != nil {
 		println("GetFileDataByHash---err",err.Error())
 	}
@@ -100,14 +100,14 @@ func TestDiskFileData(t *testing.T) {
 }
 
 func TestEthAPIBackend_GetFileDataByCommitment(t *testing.T) {
-	client,err := ethclient.DialContext(context.TODO(),"http://127.0.0.1:" + port)
+	client,err := ethclient.DialContext(context.TODO(),"http://13.212.115.195:" + port)
 	if err != nil {
 		println("DialContext-----err",err.Error())
 	}
 
-	commit := []byte("commit------1")
-	cm := common.Bytes2Hex(commit)
-	res,err := client.GetFileDataByCommitment(context.TODO(),cm)
+	// commit := []byte("commit------1")
+	// cm := common.Bytes2Hex(commit)
+	res,err := client.GetFileDataByCommitment(context.TODO(),"0x91da4c627440f9bde31bfe0f5d2920bf96b38a82753bb6826d6707d1f8672ee5bca97737a32bd1b9772bc9e17ea78f69")
 	if err != nil {
 		println("GetFileDataByCommitment-----err",err.Error())
 	}
@@ -122,7 +122,7 @@ func TestGetFileDataByHashes(t *testing.T){
 		println("DialContext-----err",err.Error())
 	}
 
-	res,err := client.GetBatchFileDataByHashes(context.TODO(),rpc.TxHashes{TxHashes: []common.Hash{common.BytesToHash([]byte("0x445dc7b5d45bc0db85a36d3d47cbbf70b00471068954bc9395be2cb414fe1285"))}})
+	res,err := client.GetBatchFileDataByHashes(context.TODO(),rpc.TxHashes{TxHashes: []common.Hash{common.BytesToHash([]byte("0x2714d7564144c2752f66cf9dd030b0d57007cac960fb20bffc0c8f30f1a3261d"))}})
 	if err != nil {
 		println("TestGetFileDataByHashes-----err",err.Error())
 	}
