@@ -106,7 +106,8 @@ func TestEthAPIBackend_GetFileDataByCommitment(t *testing.T) {
 	}
 
 	commit := []byte("commit------1")
-	res,err := client.GetFileDataByCommitment(context.TODO(),commit)
+	cm := common.Bytes2Hex(commit)
+	res,err := client.GetFileDataByCommitment(context.TODO(),cm)
 	if err != nil {
 		println("GetFileDataByCommitment-----err",err.Error())
 	}

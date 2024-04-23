@@ -1927,10 +1927,10 @@ func (f *FileDataAPI) GetFileDataByHash(hash common.Hash) (*RPCFileData, error) 
 	return rpcFd, nil
 }
 
-func (f *FileDataAPI) GetFileDataByCommitment(comimt []byte) (*RPCFileData, error) {
-	str := hex.EncodeToString(comimt)
-	log.Info("FileDataAPI----", "GetFileDataByCommitment---called--comimt", str)
-	fd, err := f.b.GetFileDataByCommitment(comimt)
+func (f *FileDataAPI) GetFileDataByCommitment(comimt string) (*RPCFileData, error) {
+	log.Info("FileDataAPI----", "GetFileDataByCommitment---called--comimt", comimt)
+	data := common.Hex2Bytes(comimt)
+	fd, err := f.b.GetFileDataByCommitment(data)
 	if err != nil {
 		return nil, err
 	}

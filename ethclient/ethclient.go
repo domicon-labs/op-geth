@@ -323,7 +323,7 @@ func (ec *Client) GetFileDataByHash(ctx context.Context,hash common.Hash) (RPCFi
 	return fd,err
 }
 
-func (ec *Client) GetFileDataByCommitment(ctx context.Context,comimt []byte) (RPCFileData, error) {
+func (ec *Client) GetFileDataByCommitment(ctx context.Context,comimt string) (RPCFileData, error) {
 	var fd RPCFileData
 	log.Info("client---GetFileDataByCommitment---iscalling---")
 	err := ec.c.CallContext(ctx,&fd,"eth_getFileDataByCommitment",comimt)
